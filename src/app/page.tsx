@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -50,6 +49,19 @@ const categories = [
   "Transport",
   "Entertainment",
   "Utilities",
+  "Rent",
+  "Healthcare",
+  "Education",
+  "Shopping",
+  "Investments",
+  "Gifts",
+  "Travel",
+  "Personal Care",
+  "Home Improvement",
+  "Insurance",
+  "Taxes",
+  "Debt Payments",
+  "Savings",
   "Other",
 ];
 
