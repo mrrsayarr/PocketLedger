@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -325,9 +326,9 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="container mx-auto p-4">
-        <Card className="max-w-md mx-auto">
+        <Card className="max-w-md mx-auto rounded-lg shadow-md">
           <CardHeader>
-            <CardTitle>{isPasswordSet ? "Login" : "Set Password"}</CardTitle>
+            <CardTitle className="text-2xl font-semibold">{isPasswordSet ? "Login" : "Set Password"}</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(isPasswordSet ? handleLogin : handleSetPassword)}>
@@ -336,9 +337,10 @@ export default function Home() {
                 type="password"
                 id="password"
                 {...register("password")}
+                className="rounded-md shadow-sm"
               />
               <Button
-                className="mt-4"
+                className="mt-4 rounded-md shadow-md"
                 type="submit"
               >
                 {isPasswordSet ? "Login" : "Set Password"}
@@ -354,18 +356,18 @@ export default function Home() {
     <div className="container mx-auto p-4">
       {/* Logout Button */}
       <div className="flex justify-between mb-4">
-        <Button variant="secondary" onClick={handleLogout}>
+        <Button variant="secondary" onClick={handleLogout} className="rounded-md shadow-md">
           Logout
         </Button>
 
         {/* Change Password Button */}
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="secondary">Change Password</Button>
+            <Button variant="secondary" className="rounded-md shadow-md">Change Password</Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] rounded-lg shadow-md">
             <DialogHeader>
-              <DialogTitle>Change Password</DialogTitle>
+              <DialogTitle className="text-lg font-semibold">Change Password</DialogTitle>
               <DialogDescription>
                 Enter your new password.
               </DialogDescription>
@@ -380,15 +382,15 @@ export default function Home() {
                   id="newPassword"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="col-span-3"
+                  className="col-span-3 rounded-md shadow-sm"
                 />
               </div>
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="secondary">Cancel</Button>
+                <Button type="button" variant="secondary" className="rounded-md shadow-md">Cancel</Button>
               </DialogClose>
-              <Button type="submit" onClick={handleChangePassword}>Change Password</Button>
+              <Button type="submit" onClick={handleChangePassword} className="rounded-md shadow-md">Change Password</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -403,30 +405,31 @@ export default function Home() {
           id="dark-mode"
           checked={darkMode}
           onCheckedChange={toggleDarkMode}
+          className="rounded-md shadow-sm"
         />
       </div>
 
       {/* Dashboard Overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-        <Card>
+        <Card className="rounded-lg shadow-md">
           <CardHeader>
-            <CardTitle>Current Balance</CardTitle>
+            <CardTitle className="text-xl font-semibold">Current Balance</CardTitle>
           </CardHeader>
           <CardContent>
             ₺{currentBalance.toFixed(2)}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-lg shadow-md">
           <CardHeader>
-            <CardTitle>Total Income</CardTitle>
+            <CardTitle className="text-xl font-semibold">Total Income</CardTitle>
           </CardHeader>
           <CardContent className="text-green-500">
             ₺{totalIncome.toFixed(2)}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="rounded-lg shadow-md">
           <CardHeader>
-            <CardTitle>Total Expenses</CardTitle>
+            <CardTitle className="text-xl font-semibold">Total Expenses</CardTitle>
           </CardHeader>
           <CardContent className="text-red-500">
             ₺{totalExpenses.toFixed(2)}
@@ -435,9 +438,9 @@ export default function Home() {
       </div>
 
       {/* Transaction Input */}
-      <Card className="mb-4">
+      <Card className="mb-4 rounded-lg shadow-md">
         <CardHeader>
-          <CardTitle>Add Transaction</CardTitle>
+          <CardTitle className="text-xl font-semibold">Add Transaction</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -448,14 +451,14 @@ export default function Home() {
                 mode="single"
                 selected={date}
                 onSelect={setDate}
-                className="rounded-md border p-2 w-full"
+                className="rounded-md border p-2 w-full shadow-sm"
               />
             </div>
             <div>
               <Label htmlFor="category">Category</Label>
               <select
                 id="category"
-                className="w-full rounded-md border p-2 bg-background"
+                className="w-full rounded-md border p-2 bg-background shadow-sm"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               >
@@ -473,13 +476,14 @@ export default function Home() {
                 id="amount"
                 value={amount}
                 onChange={(e) => setAmount(Number(e.target.value))}
+                className="rounded-md shadow-sm"
               />
             </div>
             <div>
               <Label htmlFor="type">Type</Label>
               <select
                 id="type"
-                className="w-full rounded-md border p-2 bg-background"
+                className="w-full rounded-md border p-2 bg-background shadow-sm"
                 value={type}
                 onChange={(e) =>
                   setType(e.target.value === "income" ? "income" : "expense")
@@ -495,19 +499,20 @@ export default function Home() {
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
+                className="rounded-md shadow-sm"
               />
             </div>
           </div>
-          <Button className="mt-4" onClick={addTransaction}>
+          <Button className="mt-4 rounded-md shadow-md" onClick={addTransaction}>
              Add Transaction
           </Button>
         </CardContent>
       </Card>
 
       {/* Transaction History */}
-      <Card className="mb-4">
+      <Card className="mb-4 rounded-lg shadow-md">
         <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
+          <CardTitle className="text-xl font-semibold">Transaction History</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -545,6 +550,7 @@ export default function Home() {
                       variant="secondary"
                       size="sm"
                       onClick={() => deleteTransaction(transaction.id)}
+                      className="rounded-md shadow-sm"
                     >
                       Delete
                     </Button>
@@ -557,9 +563,9 @@ export default function Home() {
       </Card>
 
       {/* Spending Chart */}
-      <Card className="h-[500px]">
+      <Card className="h-[500px] rounded-lg shadow-md">
         <CardHeader>
-          <CardTitle>Spending by Category</CardTitle>
+          <CardTitle className="text-xl font-semibold">Spending by Category</CardTitle>
         </CardHeader>
         <CardContent className="h-full">
           <ResponsiveContainer width="100%" height="100%">
@@ -620,3 +626,4 @@ export default function Home() {
     </div>
   );
 }
+
