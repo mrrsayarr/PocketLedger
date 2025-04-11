@@ -34,6 +34,7 @@ import {
 } from "@/lib/database";
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { useForm } from 'react-hook-form';
 
 // Define type for a transaction
 type Transaction = {
@@ -157,6 +158,9 @@ export default function Home() {
   const [isPasswordSet, setIsPasswordSet] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const passwordForm = useForm();
+  const { register, handleSubmit } = passwordForm;
+
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
@@ -256,48 +260,7 @@ export default function Home() {
     loadDashboardData();
   };
 
-  // Function to handle edit transaction
-  /*const handleEditTransaction = (transaction: Transaction) => {
-    setEditingTransaction(transaction);
-    setDate(transaction.date);
-    setCategory(transaction.category);
-    setAmount(transaction.amount);
-    setType(transaction.type);
-    setNotes(transaction.notes || "");
-  };
 
-  const saveEditedTransaction = async () => {
-    if (!editingTransaction) return;
-
-    if (!date || !category || !amount) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-      });
-      return;
-    }
-
-    await editTransactionInDb(
-      editingTransaction.id,
-      date.toISOString(),
-      category,
-      amount,
-      type,
-      notes
-    );
-
-    setEditingTransaction(null);
-    setAmount(0);
-    setNotes("");
-    toast({
-      title: "Success",
-      description: "Transaction updated successfully",
-    });
-
-    loadTransactions();
-    loadDashboardData();
-  };
-*/
   // Toggle between dark and light mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -305,8 +268,8 @@ export default function Home() {
     document.documentElement.classList.toggle("dark");
   };
 
-  const handleSetPassword = async () => {
-    await setUserPasswordInDb(password);
+  const handleSetPassword = async (data: any) => {
+    await setUserPasswordInDb(data.password);
     setIsPasswordSet(true);
     toast({
       title: "Success",
@@ -314,9 +277,9 @@ export default function Home() {
     });
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (data: any) => {
     const storedPassword = await getUserPasswordFromDb();
-    if (password === storedPassword) {
+    if (data.password === storedPassword) {
       localStorage.setItem("isAuthenticated", "true");
       setIsAuthenticated(true);
       toast({
@@ -367,19 +330,20 @@ export default function Home() {
             <CardTitle>{isPasswordSet ? "Login" : "Set Password"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Label htmlFor="password">Password</Label>
-            <Input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            <Button
-              className="mt-4"
-              onClick={isPasswordSet ? handleLogin : handleSetPassword}
-            >
-              {isPasswordSet ? "Login" : "Set Password"}
-            </Button>
+            <form onSubmit={handleSubmit(isPasswordSet ? handleLogin : handleSetPassword)}>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                type="password"
+                id="password"
+                {...register("password")}
+              />
+              <Button
+                className="mt-4"
+                type="submit"
+              >
+                {isPasswordSet ? "Login" : "Set Password"}
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -449,7 +413,7 @@ export default function Home() {
             <CardTitle>Current Balance</CardTitle>
           </CardHeader>
           <CardContent>
-            ${currentBalance.toFixed(2)}
+            ₺{currentBalance.toFixed(2)}
           </CardContent>
         </Card>
         <Card>
@@ -457,7 +421,7 @@ export default function Home() {
             <CardTitle>Total Income</CardTitle>
           </CardHeader>
           <CardContent className="text-green-500">
-            ${totalIncome.toFixed(2)}
+            ₺{totalIncome.toFixed(2)}
           </CardContent>
         </Card>
         <Card>
@@ -465,7 +429,7 @@ export default function Home() {
             <CardTitle>Total Expenses</CardTitle>
           </CardHeader>
           <CardContent className="text-red-500">
-            ${totalExpenses.toFixed(2)}
+            ₺{totalExpenses.toFixed(2)}
           </CardContent>
         </Card>
       </div>
@@ -473,7 +437,7 @@ export default function Home() {
       {/* Transaction Input */}
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</CardTitle>
+          <CardTitle>Add Transaction</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -534,8 +498,8 @@ export default function Home() {
               />
             </div>
           </div>
-          <Button className="mt-4" onClick={editingTransaction ? null : addTransaction}>
-            {editingTransaction ? "Save Edited Transaction" : "Add Transaction"}
+          <Button className="mt-4" onClick={addTransaction}>
+             Add Transaction
           </Button>
         </CardContent>
       </Card>
@@ -572,7 +536,7 @@ export default function Home() {
                     )}
                   >
                     {transaction.type === "income" ? "+" : "-"}
-                    ${transaction.amount.toFixed(2)}
+                    ₺{transaction.amount.toFixed(2)}
                   </TableCell>
                   <TableCell>{transaction.type}</TableCell>
                   <TableCell>{transaction.notes}</TableCell>
@@ -584,7 +548,6 @@ export default function Home() {
                     >
                       Delete
                     </Button>
-                    
                   </TableCell>
                 </TableRow>
               ))}
