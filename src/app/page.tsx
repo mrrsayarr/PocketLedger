@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -70,9 +71,25 @@ export default function Home() {
   >([]);
 
   useEffect(() => {
+    // Load dark mode state from localStorage
+    const storedDarkMode = localStorage.getItem("darkMode");
+    if (storedDarkMode === "true") {
+      setDarkMode(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove("dark");
+    }
+
     loadTransactions();
     loadDashboardData();
   }, []);
+
+  useEffect(() => {
+    // Save dark mode state to localStorage
+    localStorage.setItem("darkMode", darkMode.toString());
+  }, [darkMode]);
+
 
   const loadTransactions = async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
@@ -148,6 +165,7 @@ export default function Home() {
   // Toggle between dark and light mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
+    localStorage.setItem("darkMode", (!darkMode).toString());
     document.documentElement.classList.toggle("dark");
   };
 
