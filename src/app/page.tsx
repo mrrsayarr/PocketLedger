@@ -23,7 +23,6 @@ import { Icons } from "@/components/icons";
 import { toast } from "@/hooks/use-toast";
 import {
   addTransactionToDb,
-  editTransactionInDb,
   deleteTransactionFromDb,
   getAllTransactionsFromDb,
   getTotalBalanceFromDb,
@@ -258,7 +257,7 @@ export default function Home() {
   };
 
   // Function to handle edit transaction
-  const handleEditTransaction = (transaction: Transaction) => {
+  /*const handleEditTransaction = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setDate(transaction.date);
     setCategory(transaction.category);
@@ -298,7 +297,7 @@ export default function Home() {
     loadTransactions();
     loadDashboardData();
   };
-
+*/
   // Toggle between dark and light mode
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -339,6 +338,13 @@ export default function Home() {
   };
 
   const handleChangePassword = async () => {
+    if (!password) {
+      toast({
+        title: "Error",
+        description: "Please enter a new password",
+      });
+      return;
+    }
     await setUserPasswordInDb(password);
     toast({
       title: "Success",
@@ -522,7 +528,7 @@ export default function Home() {
               />
             </div>
           </div>
-          <Button className="mt-4" onClick={editingTransaction ? saveEditedTransaction : addTransaction}>
+          <Button className="mt-4" onClick={editingTransaction ? null : addTransaction}>
             {editingTransaction ? "Save Edited Transaction" : "Add Transaction"}
           </Button>
         </CardContent>
@@ -572,13 +578,7 @@ export default function Home() {
                     >
                       Delete
                     </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => handleEditTransaction(transaction)}
-                    >
-                      Edit
-                    </Button>
+                    
                   </TableCell>
                 </TableRow>
               ))}
@@ -593,7 +593,7 @@ export default function Home() {
           <CardTitle>Spending by Category</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={400}>
             <PieChart>
               <Pie
                 data={spendingData}
