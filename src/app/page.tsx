@@ -63,9 +63,27 @@ const categories = [
   "Debt Payments",
   "Savings",
   "Other",
+  "Bonus",
+  "Freelance",
+  "Side Hustle",
+  "Dividends",
+  "Grants",
+  "Lottery",
+  "Refunds",
+  "Allowance",
+  "Pocket Money",
+  "Social Security",
+  "Pension",
+  "Retirement Fund",
+  "Charity",
+  "Books",
+  "Subscriptions",
+  "Pet Care",
 ];
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#33b8ff"];
+
+const PASSWORD_KEY = "appPassword";
 
 export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -78,9 +96,13 @@ export default function Home() {
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
-    const [spendingData, setSpendingData] = useState<
+  const [spendingData, setSpendingData] = useState<
     { name: string; value: number }[]
   >([]);
+
+  const [password, setPassword] = useState("");
+  const [isPasswordSet, setIsPasswordSet] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     // Load dark mode state from localStorage
@@ -93,6 +115,21 @@ export default function Home() {
       document.documentElement.classList.remove("dark");
     }
 
+    // Check if a password is set
+    const storedPassword = localStorage.getItem(PASSWORD_KEY);
+    if (storedPassword) {
+      setIsPasswordSet(true);
+    }
+
+    // Check authentication
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (isAuthenticated === "true") {
+      setIsAuthenticated(true);
+    }
+    if (storedPassword && isAuthenticated !== "true") {
+      setIsAuthenticated(false); // Require login if password exists but not authenticated
+    }
+
     loadTransactions();
     loadDashboardData();
   }, []);
@@ -101,7 +138,6 @@ export default function Home() {
     // Save dark mode state to localStorage
     localStorage.setItem("darkMode", darkMode.toString());
   }, [darkMode]);
-
 
   const loadTransactions = async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
@@ -181,8 +217,74 @@ export default function Home() {
     document.documentElement.classList.toggle("dark");
   };
 
+  const handleSetPassword = () => {
+    localStorage.setItem(PASSWORD_KEY, password);
+    setIsPasswordSet(true);
+    toast({
+      title: "Success",
+      description: "Password set successfully",
+    });
+  };
+
+  const handleLogin = () => {
+    const storedPassword = localStorage.getItem(PASSWORD_KEY);
+    if (password === storedPassword) {
+      localStorage.setItem("isAuthenticated", "true");
+      setIsAuthenticated(true);
+      toast({
+        title: "Success",
+        description: "Login successful",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Incorrect password",
+      });
+    }
+    setPassword("");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container mx-auto p-4">
+        <Card className="max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle>{isPasswordSet ? "Login" : "Set Password"}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="password">Password</Label>
+            <Input
+              type="password"
+              id="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <Button
+              className="mt-4"
+              onClick={isPasswordSet ? handleLogin : handleSetPassword}
+            >
+              {isPasswordSet ? "Login" : "Set Password"}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4">
+      {/* Logout Button */}
+      <div className="flex justify-end mb-4">
+        <Button variant="secondary" onClick={handleLogout}>
+          Logout
+        </Button>
+      </div>
+
       {/* Theme Toggle */}
       <div className="flex justify-end mb-4">
         <Label htmlFor="dark-mode" className="mr-2">
@@ -331,7 +433,7 @@ export default function Home() {
                   <TableCell>{transaction.type}</TableCell>
                   <TableCell>{transaction.notes}</TableCell>
                   <TableCell>
-                  <Button
+                    <Button
                       variant="secondary"
                       size="sm"
                       onClick={() => deleteTransaction(transaction.id)}
