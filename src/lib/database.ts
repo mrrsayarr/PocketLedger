@@ -19,6 +19,19 @@ const initializeDatabase = async () => {
       notes TEXT
     )
   `);
+
+  await db.exec(`
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    password TEXT NOT NULL
+  )
+`);
+
+  // Ensure there is always one user record to simplify password management.
+  const userCount = await db.get('SELECT COUNT(*) as count FROM users');
+  if (userCount && (userCount as any).count === 0) {
+    await db.run('INSERT INTO users (password) VALUES (?)', ''); // Initial empty password
+  }
   return db;
 };
 
@@ -95,4 +108,17 @@ export const getSpendingByCategoryFromDb = async (): Promise<{ category: string;
   );
   await db.close();
   return result.map((item: any) => ({ category: item.category, total: Number(item.total) }));
+};
+
+export const getUserPasswordFromDb = async (): Promise<string | null> => {
+  const db = await initializeDatabase();
+  const user = await db.get('SELECT password FROM users WHERE id = 1'); // Assuming single user with ID 1
+  await db.close();
+  return user ? (user as any).password : null;
+};
+
+export const setUserPasswordInDb = async (password: string) => {
+  const db = await initializeDatabase();
+  await db.run('UPDATE users SET password = ? WHERE id = 1', password); // Assuming single user with ID 1
+  await db.close();
 };

@@ -30,7 +30,11 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
+  getUserPasswordFromDb,
+  setUserPasswordInDb,
 } from "@/lib/database";
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 // Define type for a transaction
 type Transaction = {
@@ -79,6 +83,56 @@ const categories = [
   "Books",
   "Subscriptions",
   "Pet Care",
+  "Groceries",
+  "Eating Out",
+  "Public Transport",
+  "Fuel",
+  "Cinema",
+  "Concerts",
+  "Streaming Services",
+  "Electricity",
+  "Water",
+  "Gas",
+  "Internet",
+  "Mobile Phone",
+  "Property Tax",
+  "Service Charge",
+  "Property Insurance",
+  "Stationery",
+  "Courses",
+  "Tuition Fees",
+  "Clothes",
+  "Shoes",
+  "Gadgets",
+  "Furniture",
+  "Stocks",
+  "Bonds",
+  "Mutual Funds",
+  "Gifts Given",
+  "Wedding Gifts",
+  "Birthday Gifts",
+  "Holiday Gifts",
+  "Flights",
+  "Hotels",
+  "Activities",
+  "Cosmetics",
+  "Hairdressing",
+  "Spa Treatments",
+  "DIY",
+  "Gardening",
+  "Repairs",
+  "Life Insurance",
+  "Car Insurance",
+  "Health Insurance",
+  "National Insurance",
+  "Council Tax",
+  "VAT",
+  "Income Tax",
+  "Credit Card Payments",
+  "Loan Payments",
+  "Emergency Fund",
+  "Holiday Fund",
+  "New Car Fund",
 ];
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#33b8ff"];
@@ -104,6 +158,8 @@ export default function Home() {
   const [isPasswordSet, setIsPasswordSet] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
   useEffect(() => {
     // Load dark mode state from localStorage
     const storedDarkMode = localStorage.getItem("darkMode");
@@ -115,24 +171,29 @@ export default function Home() {
       document.documentElement.classList.remove("dark");
     }
 
-    // Check if a password is set
-    const storedPassword = localStorage.getItem(PASSWORD_KEY);
-    if (storedPassword) {
-      setIsPasswordSet(true);
-    }
+    const checkPassword = async () => {
+      const storedPassword = await getUserPasswordFromDb();
+      setIsPasswordSet(!!storedPassword);
+      if (storedPassword) {
+        setIsPasswordSet(true);
+        setIsAuthenticated(false); // Require login
+      } else {
+        setIsPasswordSet(false);
+      }
+    };
 
-    // Check authentication
+    checkPassword();
+    checkAuthentication();
+    loadTransactions();
+    loadDashboardData();
+  }, []);
+
+  const checkAuthentication = () => {
     const isAuthenticated = localStorage.getItem("isAuthenticated");
     if (isAuthenticated === "true") {
       setIsAuthenticated(true);
     }
-    if (storedPassword && isAuthenticated !== "true") {
-      setIsAuthenticated(false); // Require login if password exists but not authenticated
-    }
-
-    loadTransactions();
-    loadDashboardData();
-  }, []);
+  };
 
   useEffect(() => {
     // Save dark mode state to localStorage
@@ -196,16 +257,44 @@ export default function Home() {
     loadDashboardData();
   };
 
-  // Function to edit a transaction
-  const editTransaction = async (transaction: Transaction) => {
+  // Function to handle edit transaction
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setDate(transaction.date);
+    setCategory(transaction.category);
+    setAmount(transaction.amount);
+    setType(transaction.type);
+    setNotes(transaction.notes || "");
+  };
+
+  const saveEditedTransaction = async () => {
+    if (!editingTransaction) return;
+
+    if (!date || !category || !amount) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+      });
+      return;
+    }
+
     await editTransactionInDb(
-      transaction.id,
-      transaction.date.toISOString(),
-      transaction.category,
-      transaction.amount,
-      transaction.type,
-      transaction.notes
+      editingTransaction.id,
+      date.toISOString(),
+      category,
+      amount,
+      type,
+      notes
     );
+
+    setEditingTransaction(null);
+    setAmount(0);
+    setNotes("");
+    toast({
+      title: "Success",
+      description: "Transaction updated successfully",
+    });
+
     loadTransactions();
     loadDashboardData();
   };
@@ -217,8 +306,8 @@ export default function Home() {
     document.documentElement.classList.toggle("dark");
   };
 
-  const handleSetPassword = () => {
-    localStorage.setItem(PASSWORD_KEY, password);
+  const handleSetPassword = async () => {
+    await setUserPasswordInDb(password);
     setIsPasswordSet(true);
     toast({
       title: "Success",
@@ -226,8 +315,8 @@ export default function Home() {
     });
   };
 
-  const handleLogin = () => {
-    const storedPassword = localStorage.getItem(PASSWORD_KEY);
+  const handleLogin = async () => {
+    const storedPassword = await getUserPasswordFromDb();
     if (password === storedPassword) {
       localStorage.setItem("isAuthenticated", "true");
       setIsAuthenticated(true);
@@ -247,6 +336,15 @@ export default function Home() {
   const handleLogout = () => {
     localStorage.removeItem("isAuthenticated");
     setIsAuthenticated(false);
+  };
+
+  const handleChangePassword = async () => {
+    await setUserPasswordInDb(password);
+    toast({
+      title: "Success",
+      description: "Password changed successfully",
+    });
+    setPassword("");
   };
 
   if (!isAuthenticated) {
@@ -279,10 +377,45 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4">
       {/* Logout Button */}
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-between mb-4">
         <Button variant="secondary" onClick={handleLogout}>
           Logout
         </Button>
+
+        {/* Change Password Button */}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="secondary">Change Password</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Change Password</DialogTitle>
+              <DialogDescription>
+                Enter your new password.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="newPassword" className="text-right">
+                  New Password
+                </Label>
+                <Input
+                  type="password"
+                  id="newPassword"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">Cancel</Button>
+              </DialogClose>
+              <Button type="submit" onClick={handleChangePassword}>Change Password</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Theme Toggle */}
@@ -328,7 +461,7 @@ export default function Home() {
       {/* Transaction Input */}
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle>Add Transaction</CardTitle>
+          <CardTitle>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -382,16 +515,15 @@ export default function Home() {
             </div>
             <div className="md:col-span-2">
               <Label htmlFor="notes">Notes</Label>
-              <Input
-                type="text"
+              <Textarea
                 id="notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
           </div>
-          <Button className="mt-4" onClick={addTransaction}>
-            Add Transaction
+          <Button className="mt-4" onClick={editingTransaction ? saveEditedTransaction : addTransaction}>
+            {editingTransaction ? "Save Edited Transaction" : "Add Transaction"}
           </Button>
         </CardContent>
       </Card>
@@ -439,6 +571,13 @@ export default function Home() {
                       onClick={() => deleteTransaction(transaction.id)}
                     >
                       Delete
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleEditTransaction(transaction)}
+                    >
+                      Edit
                     </Button>
                   </TableCell>
                 </TableRow>
