@@ -351,6 +351,12 @@ export default function Home() {
       description: "Password changed successfully",
     });
     setPassword("");
+
+    // Display a success toast for 2 seconds
+    toast({
+      title: "Success",
+      description: "Password changed successfully",
+    });
   };
 
   if (!isAuthenticated) {
@@ -588,18 +594,18 @@ export default function Home() {
       </Card>
 
       {/* Spending Chart */}
-      <Card>
+      <Card className="h-[500px]">
         <CardHeader>
           <CardTitle>Spending by Category</CardTitle>
         </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
+        <CardContent className="h-full">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={spendingData}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
+                labelLine={true}
                 label={({
                   cx,
                   cy,
@@ -610,7 +616,7 @@ export default function Home() {
                   index,
                 }) => {
                   const RADIAN = Math.PI / 180;
-                  const radius = 25 + outerRadius;
+                  const radius = outerRadius + 30; // Increased radius for better visibility
                   const x = cx + radius * Math.cos(-midAngle * RADIAN);
                   const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -621,6 +627,7 @@ export default function Home() {
                       fill={COLORS[index % COLORS.length]}
                       textAnchor={x > cx ? "start" : "end"}
                       dominantBaseline="central"
+                      fontSize={16} // Increased font size
                     >
                       {value > 0 ? spendingData[index].name : null}
                     </text>
@@ -628,7 +635,7 @@ export default function Home() {
                 }}
                 dataKey="value"
                 nameKey="name"
-                outerRadius={120}
+                outerRadius={180} // Increased outer radius
                 fill="#8884d8"
               >
                 {spendingData.map((entry, index) => (
@@ -638,7 +645,11 @@ export default function Home() {
                   />
                 ))}
               </Pie>
-              <Legend />
+              <Legend 
+                wrapperStyle={{
+                  fontSize: '14px', // Increased legend font size
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
