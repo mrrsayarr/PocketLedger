@@ -36,6 +36,8 @@ import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, Dialog
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
 
 // Define type for a transaction
 type Transaction = {
@@ -159,7 +161,9 @@ export default function Home() {
   const [isPasswordSet, setIsPasswordSet] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const passwordForm = useForm();
+  const passwordForm = useForm({
+    mode: "onSubmit"
+  });
   const { register, handleSubmit } = passwordForm;
   const router = useRouter();
 
@@ -271,6 +275,8 @@ export default function Home() {
   const handleSetPassword = async (data: any) => {
     await setUserPasswordInDb(data.password);
     setIsPasswordSet(true);
+    localStorage.setItem("isAuthenticated", "true"); // Auto-login after setting password
+    setIsAuthenticated(true);
     toast({
       title: "Success",
       description: "Password set successfully",
@@ -329,7 +335,7 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-md rounded-lg shadow-md">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">
               {isPasswordSet ? "Login" : "Set Password"}
@@ -341,20 +347,25 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <form onSubmit={handleSubmit(isPasswordSet ? handleLogin : handleSetPassword)}>
-              <div className="grid gap-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  {...register("password")}
-                  placeholder="Enter your password"
-                />
-              </div>
-              <Button type="submit">
-                {isPasswordSet ? "Login" : "Set Password"}
-              </Button>
-            </form>
+            <Form {...passwordForm}>
+              <form onSubmit={handleSubmit(isPasswordSet ? handleLogin : handleSetPassword)} className="grid gap-2">
+                <FormItem>
+                  <FormLabel htmlFor="password">Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      id="password"
+                      type="password"
+                      {...register("password")}
+                      placeholder="Enter your password"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+                <Button type="submit" className="w-full rounded-md shadow-md">
+                  {isPasswordSet ? "Login" : "Set Password"}
+                </Button>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>
@@ -364,8 +375,8 @@ export default function Home() {
   return (
     <div className="container mx-auto p-4">
       {/* Logout Button */}
-      <div className="flex justify-between mb-4">
-        <Button variant="secondary" onClick={handleLogout} className="rounded-md shadow-md">
+      <div className="flex flex-col sm:flex-row justify-between mb-4">
+        <Button variant="secondary" onClick={handleLogout} className="rounded-md shadow-md mb-2 sm:mb-0">
           Logout
         </Button>
 
@@ -445,7 +456,7 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
-       <Button onClick={navigateToNotes} className="mt-4 rounded-md shadow-md">Go to Notes</Button>
+      <Button onClick={navigateToNotes} className="mt-4 rounded-md shadow-md">Go to Notes</Button>
       {/* Transaction Input */}
       <Card className="mb-4 rounded-lg shadow-md">
         <CardHeader>
@@ -635,5 +646,6 @@ export default function Home() {
     </div>
   );
 }
+
 
 
