@@ -1,7 +1,6 @@
-
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +10,6 @@ import {
   TableBody,
   TableCaption,
   TableCell,
-  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -23,10 +21,20 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Switch } from "@/components/ui/switch";
 import { Icons } from "@/components/icons";
 import { toast } from "@/hooks/use-toast";
+import {
+  addTransactionToDb,
+  editTransactionInDb,
+  deleteTransactionFromDb,
+  getAllTransactionsFromDb,
+  getTotalBalanceFromDb,
+  getTotalIncomeFromDb,
+  getTotalExpenseFromDb,
+  getSpendingByCategoryFromDb,
+} from "@/lib/database";
 
 // Define type for a transaction
 type Transaction = {
-  id: string;
+  id: number;
   date: Date;
   category: string;
   amount: number;
@@ -46,37 +54,49 @@ const categories = [
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#33b8ff"];
 
-const initialTransactions: Transaction[] = [
-  {
-    id: "1",
-    date: new Date(),
-    category: "Salary",
-    amount: 5000,
-    type: "income",
-    notes: "Received monthly salary",
-  },
-  {
-    id: "2",
-    date: new Date(),
-    category: "Food",
-    amount: 500,
-    type: "expense",
-    notes: "Groceries for the week",
-  },
-];
-
 export default function Home() {
-  const [transactions, setTransactions] =
-    useState<Transaction[]>(initialTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [category, setCategory] = useState(categories[0]);
   const [amount, setAmount] = useState<number | undefined>(0);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   const [darkMode, setDarkMode] = useState(false);
+  const [currentBalance, setCurrentBalance] = useState(0);
+  const [totalIncome, setTotalIncome] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+    const [spendingData, setSpendingData] = useState<
+    { name: string; value: number }[]
+  >([]);
+
+  useEffect(() => {
+    loadTransactions();
+    loadDashboardData();
+  }, []);
+
+  const loadTransactions = async () => {
+    const transactionsFromDb = await getAllTransactionsFromDb();
+    setTransactions(transactionsFromDb);
+  };
+
+  const loadDashboardData = async () => {
+    const balance = await getTotalBalanceFromDb();
+    setCurrentBalance(balance);
+
+    const income = await getTotalIncomeFromDb();
+    setTotalIncome(income);
+
+    const expenses = await getTotalExpenseFromDb();
+    setTotalExpenses(expenses);
+
+    const spending = await getSpendingByCategoryFromDb();
+    setSpendingData(
+      spending.map((item) => ({ name: item.category, value: item.total }))
+    );
+  };
 
   // Function to add a new transaction
-  const addTransaction = () => {
+  const addTransaction = async () => {
     if (!date || !category || !amount) {
       toast({
         title: "Error",
@@ -84,47 +104,46 @@ export default function Home() {
       });
       return;
     }
-    const newTransaction: Transaction = {
-      id: Math.random().toString(36).substring(7), // Generate a random ID
-      date: date,
-      category: category,
-      amount: amount,
-      type: type,
-      notes: notes,
-    };
-    setTransactions([...transactions, newTransaction]);
+
+    await addTransactionToDb(
+      date.toISOString(),
+      category,
+      amount,
+      type,
+      notes
+    );
+
     setAmount(0);
     setNotes("");
     toast({
       title: "Success",
       description: "Transaction added successfully",
     });
+
+    loadTransactions();
+    loadDashboardData();
   };
 
-  // Calculate current balance, total income, and total expenses
-  const currentBalance = transactions.reduce((acc, transaction) => {
-    return transaction.type === "income"
-      ? acc + transaction.amount
-      : acc - transaction.amount;
-  }, 0);
+  // Function to delete a transaction
+  const deleteTransaction = async (id: number) => {
+    await deleteTransactionFromDb(id);
+    loadTransactions();
+    loadDashboardData();
+  };
 
-  const totalIncome = transactions
-    .filter((transaction) => transaction.type === "income")
-    .reduce((acc, transaction) => acc + transaction.amount, 0);
-
-  const totalExpenses = transactions
-    .filter((transaction) => transaction.type === "expense")
-    .reduce((acc, transaction) => acc + transaction.amount, 0);
-
-  // Prepare data for the pie chart
-  const spendingData = categories.map((category) => {
-    const total = transactions
-      .filter(
-        (transaction) => transaction.category === category && transaction.type === "expense"
-      )
-      .reduce((acc, transaction) => acc + transaction.amount, 0);
-    return { name: category, value: total };
-  });
+  // Function to edit a transaction
+  const editTransaction = async (transaction: Transaction) => {
+    await editTransactionInDb(
+      transaction.id,
+      transaction.date.toISOString(),
+      transaction.category,
+      transaction.amount,
+      transaction.type,
+      transaction.notes
+    );
+    loadTransactions();
+    loadDashboardData();
+  };
 
   // Toggle between dark and light mode
   const toggleDarkMode = () => {
@@ -259,6 +278,7 @@ export default function Home() {
                 <TableHead>Amount</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Notes</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -280,6 +300,15 @@ export default function Home() {
                   </TableCell>
                   <TableCell>{transaction.type}</TableCell>
                   <TableCell>{transaction.notes}</TableCell>
+                  <TableCell>
+                  <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => deleteTransaction(transaction.id)}
+                    >
+                      Delete
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
