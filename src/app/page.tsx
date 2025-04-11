@@ -456,7 +456,6 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
-      <Button onClick={navigateToNotes} className="mt-4 rounded-md shadow-md">Go to Notes</Button>
       {/* Transaction Input */}
       <Card className="mb-4 rounded-lg shadow-md">
         <CardHeader>
@@ -646,6 +645,8 @@ export default function Home() {
     </div>
   );
 }
+
+
 
 
 
