@@ -1,8 +1,7 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -36,6 +35,7 @@ import {
 import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 
 // Define type for a transaction
 type Transaction = {
@@ -161,8 +161,7 @@ export default function Home() {
 
   const passwordForm = useForm();
   const { register, handleSubmit } = passwordForm;
-
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     // Load dark mode state from localStorage
@@ -323,26 +322,36 @@ export default function Home() {
     });
   };
 
+  const navigateToNotes = () => {
+    router.push('/notes');
+  };
+
   if (!isAuthenticated) {
     return (
-      <div className="container mx-auto p-4">
-        <Card className="max-w-md mx-auto rounded-lg shadow-md">
-          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">{isPasswordSet ? "Login" : "Set Password"}</CardTitle>
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Card className="w-full max-w-md">
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-2xl text-center">
+              {isPasswordSet ? "Login" : "Set Password"}
+            </CardTitle>
+            <CardDescription className="text-center">
+              {isPasswordSet
+                ? "Enter your password to access PocketLedger."
+                : "Set a password to secure your PocketLedger."}
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-4">
             <form onSubmit={handleSubmit(isPasswordSet ? handleLogin : handleSetPassword)}>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                type="password"
-                id="password"
-                {...register("password")}
-                className="rounded-md shadow-sm"
-              />
-              <Button
-                className="mt-4 rounded-md shadow-md"
-                type="submit"
-              >
+              <div className="grid gap-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  {...register("password")}
+                  placeholder="Enter your password"
+                />
+              </div>
+              <Button type="submit">
                 {isPasswordSet ? "Login" : "Set Password"}
               </Button>
             </form>
@@ -436,7 +445,7 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
-
+       <Button onClick={navigateToNotes} className="mt-4 rounded-md shadow-md">Go to Notes</Button>
       {/* Transaction Input */}
       <Card className="mb-4 rounded-lg shadow-md">
         <CardHeader>
@@ -626,4 +635,5 @@ export default function Home() {
     </div>
   );
 }
+
 
