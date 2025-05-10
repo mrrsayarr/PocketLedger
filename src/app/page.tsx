@@ -699,11 +699,23 @@ export default function Home() {
         )}
         <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
           <div className="container mx-auto flex flex-col items-center space-y-4">
-             <Link href="/about" passHref>
-                <Button variant="link" className="text-primary hover:underline">
-                  About PocketLedger Pro
-                </Button>
-              </Link>
+             <div className="flex space-x-4">
+                <Link href="/about" passHref>
+                    <Button variant="link" className="text-primary hover:underline">
+                    About (English)
+                    </Button>
+                </Link>
+                <Link href="/about-tr" passHref>
+                    <Button variant="link" className="text-primary hover:underline">
+                    Hakkında (Türkçe)
+                    </Button>
+                </Link>
+                <Link href="/about-es" passHref>
+                    <Button variant="link" className="text-primary hover:underline">
+                    Acerca de (Español)
+                    </Button>
+                </Link>
+             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
@@ -741,4 +753,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
 
