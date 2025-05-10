@@ -40,7 +40,7 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
 
 1.  **Clone the repository (or download the source code):**
     ```bash
-    git clone https://your-repository-url/pocketledger-pro.git
+    git clone https://mrrsayarr/pocketledger.git
     cd pocketledger-pro
     ```
 
