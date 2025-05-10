@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -83,6 +82,16 @@ export default function NotesPage() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Theme synchronization
+    const storedDarkMode = localStorage.getItem('darkMode');
+    if (storedDarkMode === 'false') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      // Default to dark if 'true' or null (not set)
+      document.documentElement.classList.add('dark');
+    }
+
+    // Existing notes loading logic
     if (typeof window !== "undefined") {
       const storedNotes = localStorage.getItem("financialNotes");
       if (storedNotes) {
@@ -340,10 +349,13 @@ export default function NotesPage() {
           ))
         )}
       </div>
-      <footer className="mt-auto pt-8 pb-4 text-center text-muted-foreground text-sm">
-        <p>© {new Date().getFullYear()} PocketLedger Pro. All rights reserved.</p>
+      <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
+        <div className="container mx-auto">
+          <p className="text-sm text-foreground">
+            © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
+          </p>
+        </div>
       </footer>
     </div>
   );
 }
-

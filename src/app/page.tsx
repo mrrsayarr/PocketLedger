@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Metadata, Viewport } from 'next';
@@ -195,14 +194,9 @@ export default function Home() {
       if (storedDarkMode !== null) {
         const isDarkMode = storedDarkMode === "true";
         setDarkMode(isDarkMode);
-        if (isDarkMode) {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
       } else {
+        // Default to dark mode if nothing is stored and set it in localStorage
         setDarkMode(true);
-        document.documentElement.classList.add("dark");
         localStorage.setItem("darkMode", "true");
       }
 
@@ -212,9 +206,11 @@ export default function Home() {
       await loadInitialData(initialDisplayCurrency);
     };
     initializeApp();
-  }, [loadInitialData]); // Removed displayCurrency from deps to avoid loop on init
+  }, [loadInitialData]); 
   
   useEffect(() => {
+    // This effect specifically handles applying the dark mode class and saving to localStorage
+    // It runs whenever `darkMode` state changes, or on initial mount if `setDarkMode` is called in `initializeApp`.
     localStorage.setItem("darkMode", darkMode.toString());
     if (darkMode) {
       document.documentElement.classList.add("dark");
@@ -340,7 +336,7 @@ export default function Home() {
           PocketLedger Pro
         </h1>
         <div className="flex items-center space-x-2 sm:space-x-4">
-          <Link href="/notes" asChild>
+          <Link href="/notes" passHref>
             <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
               <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               My Notes
@@ -679,40 +675,41 @@ export default function Home() {
           </CardContent>
         </Card>
       )}
-       <footer className="mt-auto pt-8 pb-4 text-center text-muted-foreground text-sm">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
-              <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
-            <AlertDialogHeader>
-              <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription className="text-muted-foreground">
-                This action cannot be undone. This will permanently delete all
-                your transaction data from the application.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleResetData}
-                className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-              >
-                Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <p className="mt-2 text-xs text-muted-foreground/80">
-          (Tip: Press Shift + S + D to reset data without confirmation)
-        </p>
-        <p className="mt-4">
-          © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
-        </p>
+      <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
+        <div className="container mx-auto flex flex-col items-center space-y-4">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
+                <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription className="text-muted-foreground">
+                  This action cannot be undone. This will permanently delete all
+                  your transaction data from the application.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleResetData}
+                  className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Continue
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <p className="text-xs text-muted-foreground/80">
+            (Tip: Press Shift + S + D to reset data without confirmation)
+          </p>
+          <p className="text-sm text-foreground">
+            © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
+          </p>
+        </div>
       </footer>
     </div>
   );
 }
-
