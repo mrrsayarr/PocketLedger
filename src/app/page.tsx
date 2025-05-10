@@ -1,7 +1,6 @@
 "use client";
 
-import type { Metadata, Viewport } from 'next';
-import { useState, useEffect, FormEvent, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from 'next/link';
 import {
   Card,
@@ -156,7 +155,17 @@ export default function Home() {
   const [amount, setAmount] = useState<number | undefined>(0);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
-  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
+  
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const storedDarkMode = localStorage.getItem("darkMode");
+      // If 'false', set to false (light). Otherwise (null or 'true'), set to true (dark).
+      return storedDarkMode === "false" ? false : true;
+    }
+    // Default for SSR or if window is not yet available
+    return true; // Default to dark
+  });
+
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -181,7 +190,7 @@ export default function Home() {
     setSpendingData(
       spending.map((item) => ({ name: item.category, value: item.total }))
     );
-  }, []);
+  }, []); // Removed state setters from deps as they are stable
 
   const loadInitialData = useCallback(async (currentDisplayCurrency: string) => {
     await loadTransactions();
@@ -189,38 +198,32 @@ export default function Home() {
   }, [loadTransactions, loadDashboardData]);
   
   useEffect(() => {
-    const initializeApp = async () => {
-      const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode !== null) {
-        const isDarkMode = storedDarkMode === "true";
-        setDarkMode(isDarkMode);
+    // This effect synchronizes the darkMode state with localStorage and the HTML class
+    // It runs whenever `darkMode` state changes, or on initial mount after first render.
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("darkMode", darkMode.toString());
+      if (darkMode) {
+        document.documentElement.classList.add("dark");
       } else {
-        // Default to dark mode if nothing is stored and set it in localStorage
-        setDarkMode(true);
-        localStorage.setItem("darkMode", "true");
+        document.documentElement.classList.remove("dark");
       }
+    }
+  }, [darkMode]);
 
+  useEffect(() => {
+    // Initialize displayCurrency and load data
+    const initializeAppData = async () => {
       const storedDisplayCurrency = localStorage.getItem("displayCurrency");
       const initialDisplayCurrency = storedDisplayCurrency || "TRY";
       setDisplayCurrency(initialDisplayCurrency);
       await loadInitialData(initialDisplayCurrency);
     };
-    initializeApp();
+    initializeAppData();
   }, [loadInitialData]); 
   
   useEffect(() => {
-    // This effect specifically handles applying the dark mode class and saving to localStorage
-    // It runs whenever `darkMode` state changes, or on initial mount if `setDarkMode` is called in `initializeApp`.
-    localStorage.setItem("darkMode", darkMode.toString());
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
-
-  useEffect(() => {
-    if (displayCurrency) {
+    // Persist displayCurrency and reload dashboard data when it changes
+    if (displayCurrency && typeof window !== 'undefined') {
         localStorage.setItem("displayCurrency", displayCurrency);
         loadDashboardData(displayCurrency);
     }
@@ -263,8 +266,8 @@ export default function Home() {
       title: "Success",
       description: "Transaction added successfully.",
     });
-    await loadTransactions(); // Reload all transactions
-    await loadDashboardData(displayCurrency); // Reload dashboard for the current display currency
+    await loadTransactions(); 
+    await loadDashboardData(displayCurrency); 
   };
 
   const deleteTransaction = async (id: number) => {
@@ -299,12 +302,9 @@ export default function Home() {
         }
 
         if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
-            // Check if 's' or 'd' is the key causing the event to prevent multiple triggers
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
                 event.preventDefault(); 
                 handleResetData(); 
-                
-                // Clear only the specific keys that triggered the shortcut
                 pressedKeys.delete('s');
                 pressedKeys.delete('d');
             }
@@ -416,7 +416,7 @@ export default function Home() {
             <div className="space-y-4 sm:space-y-6">
               <div>
                 <Label htmlFor="category-select" className="mb-1 font-medium text-card-foreground">Category</Label>
-                <select
+                 <select
                   id="category-select"
                   className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
                   value={category}
