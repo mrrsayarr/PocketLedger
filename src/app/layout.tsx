@@ -1,16 +1,17 @@
 
 import type { Metadata, Viewport } from 'next';
-import { Geist_Sans as GeistSans, Geist_Mono as GeistMono } from 'next/font/google';
+import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 
-const geistSans = GeistSans({
-  variable: '--font-geist-sans',
+const inter = Inter({
   subsets: ['latin'],
+  variable: '--font-inter',
 });
 
-const geistMono = GeistMono({
-  variable: '--font-geist-mono',
+const robotoMono = Roboto_Mono({
   subsets: ['latin'],
+  variable: '--font-roboto-mono',
+  weight: ['400', '700'], // Common weights for monospace
 });
 
 export const metadata: Metadata = {
@@ -62,7 +63,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${inter.variable} ${robotoMono.variable} antialiased`}>
         {children}
       </body>
     </html>
