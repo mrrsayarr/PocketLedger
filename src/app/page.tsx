@@ -189,10 +189,11 @@ export default function Home() {
     await loadDashboardData(currentDisplayCurrency);
   }, [loadTransactions, loadDashboardData]);
   
-  useEffect(() => {
+ useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === "false" ? false : true; 
+      // Default to dark mode if nothing is stored or if it's explicitly 'true'
+      const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -201,6 +202,7 @@ export default function Home() {
       }
     }
   }, []);
+
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -240,10 +242,10 @@ export default function Home() {
 
 
   const addTransaction = async () => {
-    if (!date || !category || amount === undefined || amount === null) {
+    if (!date || !category || amount === undefined || amount === null || isNaN(amount)) {
       toast({
         title: "Error",
-        description: "Please fill in date, category, and amount.",
+        description: "Please fill in date, category, and a valid amount.",
         variant: "destructive",
       });
       return;
