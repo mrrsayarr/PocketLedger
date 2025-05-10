@@ -124,7 +124,7 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [category, setCategory] = useState(categories[0]);
-  const [amount, setAmount] = useState<number | undefined>(undefined);
+  const [amount, setAmount] = useState<string>(""); // Changed to string for controlled input
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
@@ -135,7 +135,7 @@ export default function Home() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
-  const displayCurrencySymbol = "₺"; // Hardcoded to TL symbol
+  const displayCurrencySymbol = "₺";
 
   const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
@@ -198,7 +198,8 @@ export default function Home() {
 
 
   const addTransaction = async () => {
-    if (!date || !category || amount === undefined || amount === null || isNaN(amount)) {
+    const numericAmount = parseFloat(amount);
+    if (!date || !category || amount === "" || isNaN(numericAmount)) {
       toast({
         title: "Error",
         description: "Please fill in date, category, and a valid amount.",
@@ -206,7 +207,7 @@ export default function Home() {
       });
       return;
     }
-    if (amount <= 0) {
+    if (numericAmount <= 0) {
       toast({
         title: "Error",
         description: "Amount must be greater than zero.",
@@ -219,7 +220,7 @@ export default function Home() {
       await addTransactionToDb(
         date.toISOString(),
         category,
-        amount,
+        numericAmount,
         type,
         notes
       );
@@ -227,7 +228,7 @@ export default function Home() {
 
       setDate(new Date());
       setCategory(categories[0]);
-      setAmount(undefined); 
+      setAmount(""); 
       setNotes("");
       setType("expense");
       toast({
@@ -307,6 +308,21 @@ export default function Home() {
         window.removeEventListener('keyup', handleKeyUp);
     };
   }, [handleResetData]);
+
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow only numbers
+    if (/^\d*$/.test(value)) {
+      setAmount(value);
+    }
+  };
+
+  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Prevent '.', ',', 'e', '+', '-'
+    if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
+      e.preventDefault();
+    }
+  };
 
 
   return (
@@ -403,13 +419,16 @@ export default function Home() {
                <div>
                   <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
                   <Input
-                    type="number"
+                    type="text"
                     id="amount-input"
-                    value={amount === undefined ? "" : amount.toString()}
-                    onChange={(e) => setAmount(e.target.value === "" ? undefined : Number(e.target.value))}
+                    value={amount}
+                    onChange={handleAmountChange}
+                    onKeyDown={handleAmountKeyDown}
                     className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
-                    placeholder="e.g. 100.50"
+                    placeholder="e.g. 100"
                     aria-label="Enter transaction amount"
+                    inputMode="numeric" 
+                    pattern="[0-9]*"
                   />
                 </div>
               <div>
@@ -666,3 +685,4 @@ export default function Home() {
     </div>
   );
 }
+
