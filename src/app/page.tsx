@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -57,6 +56,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 // Define type for a transaction
 type Transaction = {
@@ -106,21 +111,21 @@ const CustomTooltip = ({ active, payload }: any) => {
       if (percentScaled === 0) {
         displayPercentText = "0.00";
       } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00") {
-        // If it's positive but rounds to "0.00" with two decimal places,
-        // use four decimal places to show it's not exactly zero.
         displayPercentText = percentScaled.toFixed(4);
       } else {
         displayPercentText = percentScaled.toFixed(2);
       }
     } else {
-      displayPercentText = '0.00'; // Fallback for NaN or non-numeric percent
+      displayPercentText = '0.00'; 
     }
+    
+    const displayCurrencySymbol = "₺";
 
     return (
       <div className="bg-background/80 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl text-sm">
         <p className="font-bold text-foreground mb-1">{name}</p>
         <p className="text-muted-foreground">
-          Amount: <span className="font-medium text-foreground">₺{typeof value === 'number' ? value.toFixed(2) : 'N/A'}</span>
+          Amount: <span className="font-medium text-foreground">{displayCurrencySymbol}{typeof value === 'number' ? value.toFixed(2) : 'N/A'}</span>
         </p>
         <p className="text-muted-foreground">
           Percentage: <span className="font-medium text-foreground">{displayPercentText}%</span>
@@ -172,7 +177,7 @@ export default function Home() {
     await loadDashboardData();
   }, [loadTransactions, loadDashboardData]);
   
- useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
       const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
@@ -338,97 +343,98 @@ export default function Home() {
 
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
-      <Toaster />
-      <header className="flex justify-between items-center mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
-          <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
-          PocketLedger Pro
-        </h1>
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <Link href="/notes" passHref>
-            <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
-              <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              My Notes
-            </Button>
-          </Link>
-          <div className="flex items-center space-x-1 sm:space-x-2">
-            <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
-              {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
-            </Label>
-            <Switch
-              id="dark-mode"
-              checked={darkMode}
-              onCheckedChange={toggleDarkMode}
-              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted shadow-inner rounded-full"
-              aria-label="Toggle dark mode"
-            />
-          </div>
-        </div>
-      </header>
-
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Current Balance</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xl sm:text-3xl font-bold text-card-foreground">
-            {displayCurrencySymbol}{currentBalance.toFixed(2)}
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Income</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--income))]">
-            {displayCurrencySymbol}{totalIncome.toFixed(2)}
-          </CardContent>
-        </Card>
-        <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Expenses</CardTitle>
-          </CardHeader>
-          <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--expense))]">
-            {displayCurrencySymbol}{totalExpenses.toFixed(2)}
-          </CardContent>
-        </Card>
-      </section>
-
-      <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
-        <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Add New Transaction</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            <div className="flex flex-col items-center">
-              <Label htmlFor="date-calendar" className="mb-2 font-medium text-card-foreground self-start">Date</Label>
-              <Calendar
-                id="date-calendar"
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-lg border p-3 w-full shadow-inner bg-background/70 backdrop-blur-sm"
-                aria-label="Select transaction date"
+    <TooltipProvider>
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/80 backdrop-blur-sm">
+        <Toaster />
+        <header className="flex justify-between items-center mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
+            <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
+            PocketLedger Pro
+          </h1>
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <Link href="/notes" passHref>
+              <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+                <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                My Notes
+              </Button>
+            </Link>
+            <div className="flex items-center space-x-1 sm:space-x-2">
+              <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
+                {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
+              </Label>
+              <Switch
+                id="dark-mode"
+                checked={darkMode}
+                onCheckedChange={toggleDarkMode}
+                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted shadow-inner rounded-full"
+                aria-label="Toggle dark mode"
               />
             </div>
-            <div className="space-y-4 sm:space-y-6">
-              <div>
-                <Label htmlFor="category-select" className="mb-1 font-medium text-card-foreground">Category</Label>
-                 <select
-                  id="category-select"
-                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  aria-label="Select transaction category"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
+          </div>
+        </header>
+
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Current Balance</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xl sm:text-3xl font-bold text-card-foreground">
+              {displayCurrencySymbol}{currentBalance.toFixed(2)}
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Income</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--income))]">
+              {displayCurrencySymbol}{totalIncome.toFixed(2)}
+            </CardContent>
+          </Card>
+          <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Expenses</CardTitle>
+            </CardHeader>
+            <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--expense))]">
+              {displayCurrencySymbol}{totalExpenses.toFixed(2)}
+            </CardContent>
+          </Card>
+        </section>
+
+        <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Add New Transaction</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <div className="flex flex-col items-center">
+                <Label htmlFor="date-calendar" className="mb-2 font-medium text-card-foreground self-start">Date</Label>
+                <Calendar
+                  id="date-calendar"
+                  mode="single"
+                  selected={date}
+                  onSelect={setDate}
+                  className="rounded-lg border p-3 w-full shadow-inner bg-background/70 backdrop-blur-sm"
+                  aria-label="Select transaction date"
+                />
               </div>
-               <div>
+              <div className="space-y-4 sm:space-y-6">
+                <div>
+                  <Label htmlFor="category-select" className="mb-1 font-medium text-card-foreground">Category</Label>
+                  <select
+                    id="category-select"
+                    className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    aria-label="Select transaction category"
+                  >
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
                   <Input
                     type="text"
@@ -439,99 +445,122 @@ export default function Home() {
                     className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
                     placeholder="e.g. 100"
                     aria-label="Enter transaction amount"
-                    inputMode="numeric" 
+                    inputMode="numeric"
                     pattern="[0-9]*"
                   />
                 </div>
-              <div>
-                <Label htmlFor="type-select" className="mb-1 font-medium text-card-foreground">Type</Label>
-                <select
-                  id="type-select"
-                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
-                  value={type}
-                  onChange={(e) => setType(e.target.value as "income" | "expense")}
-                  aria-label="Select transaction type"
-                >
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                </select>
+                <div>
+                  <Label htmlFor="type-select" className="mb-1 font-medium text-card-foreground">Type</Label>
+                  <select
+                    id="type-select"
+                    className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
+                    value={type}
+                    onChange={(e) => setType(e.target.value as "income" | "expense")}
+                    aria-label="Select transaction type"
+                  >
+                    <option value="expense">Expense</option>
+                    <option value="income">Income</option>
+                  </select>
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <Label htmlFor="notes-textarea" className="mb-1 font-medium text-card-foreground">Notes (Optional)</Label>
+                <Textarea
+                  id="notes-textarea"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all min-h-[80px] text-sm"
+                  placeholder="Add any relevant notes..."
+                  aria-label="Enter transaction notes"
+                />
               </div>
             </div>
-            <div className="md:col-span-2">
-              <Label htmlFor="notes-textarea" className="mb-1 font-medium text-card-foreground">Notes (Optional)</Label>
-              <Textarea
-                id="notes-textarea"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all min-h-[80px] text-sm"
-                placeholder="Add any relevant notes..."
-                aria-label="Enter transaction notes"
-              />
-            </div>
-          </div>
-          <Button className="mt-6 w-full md:w-auto rounded-lg shadow-md text-base sm:text-lg py-2.5 sm:py-3 px-5 sm:px-6 bg-primary hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105" onClick={addTransaction}>
-            Add Transaction
-          </Button>
-        </CardContent>
-      </Card>
+            <Button className="mt-6 w-full md:w-auto rounded-lg shadow-md text-base sm:text-lg py-2.5 sm:py-3 px-5 sm:px-6 bg-primary hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105" onClick={addTransaction}>
+              Add Transaction
+            </Button>
+          </CardContent>
+        </Card>
 
-      <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg flex-grow bg-card/80 backdrop-blur-md">
-        <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Transaction History</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="font-semibold text-card-foreground">Date</TableHead>
-                <TableHead className="font-semibold text-card-foreground">Category</TableHead>
-                <TableHead className="font-semibold text-right text-card-foreground">Amount</TableHead>
-                <TableHead className="font-semibold text-card-foreground">Type</TableHead>
-                <TableHead className="font-semibold text-card-foreground">Notes</TableHead>
-                <TableHead className="font-semibold text-right text-card-foreground">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.length === 0 && (
+        <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg flex-grow bg-card/80 backdrop-blur-md">
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Transaction History</CardTitle>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    No transactions yet. Add one above to get started!
-                  </TableCell>
+                  <TableHead className="font-semibold text-card-foreground">Date</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Category</TableHead>
+                  <TableHead className="font-semibold text-right text-card-foreground">Amount</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Type</TableHead>
+                  <TableHead className="font-semibold text-card-foreground">Notes</TableHead>
+                  <TableHead className="font-semibold text-right text-card-foreground">Actions</TableHead>
                 </TableRow>
-              )}
-              {transactions.map((transaction) => (
-                <TableRow key={transaction.id} className="hover:bg-muted/30 transition-colors duration-200 ease-in-out">
-                  <TableCell className="text-foreground whitespace-nowrap text-sm">
-                    {format(new Date(transaction.date), "dd MMM yyyy")}
-                  </TableCell>
-                  <TableCell className="text-foreground text-sm">{transaction.category}</TableCell>
-                  <TableCell
-                    className={cn(
-                      "text-right font-medium whitespace-nowrap text-sm",
-                      transaction.type === "income"
-                        ? "text-[hsl(var(--income))]"
-                        : "text-[hsl(var(--expense))]"
-                    )}
-                  >
-                    {transaction.type === "income" ? "+" : "-"}
-                    {displayCurrencySymbol}{transaction.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    <span
+              </TableHeader>
+              <TableBody>
+                {transactions.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      No transactions yet. Add one above to get started!
+                    </TableCell>
+                  </TableRow>
+                )}
+                {transactions.map((transaction) => (
+                  <TableRow key={transaction.id} className="hover:bg-muted/30 transition-colors duration-200 ease-in-out">
+                    <TableCell className="text-foreground whitespace-nowrap text-sm">
+                      {format(new Date(transaction.date), "dd MMM yyyy")}
+                    </TableCell>
+                    <TableCell className="text-foreground text-sm">{transaction.category}</TableCell>
+                    <TableCell
                       className={cn(
-                        "px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
+                        "text-right font-medium whitespace-nowrap text-sm",
                         transaction.type === "income"
-                          ? "bg-[hsl(var(--income))]/20 text-[hsl(var(--income))]"
-                          : "bg-[hsl(var(--expense))]/20 text-[hsl(var(--expense))]"
+                          ? "text-[hsl(var(--income))]"
+                          : "text-[hsl(var(--expense))]"
                       )}
                     >
-                      {transaction.type.charAt(0).toUpperCase() +
-                        transaction.type.slice(1)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-foreground text-sm">{transaction.notes || "-"}</TableCell>
-                  <TableCell className="text-right">
-                     <AlertDialog>
+                      {transaction.type === "income" ? "+" : "-"}
+                      {displayCurrencySymbol}{transaction.amount.toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      <span
+                        className={cn(
+                          "px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
+                          transaction.type === "income"
+                            ? "bg-[hsl(var(--income))]/20 text-[hsl(var(--income))]"
+                            : "bg-[hsl(var(--expense))]/20 text-[hsl(var(--expense))]"
+                        )}
+                      >
+                        {transaction.type.charAt(0).toUpperCase() +
+                          transaction.type.slice(1)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-foreground text-sm">
+                      {transaction.notes ? (
+                        transaction.notes.split(" ").length > 6 ? (
+                          <Tooltip delayDuration={100}>
+                            <TooltipTrigger className="cursor-default text-left w-full">
+                              <p className="max-w-xs truncate">
+                                {transaction.notes.split(" ").slice(0, 6).join(" ") + "..."}
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="top"
+                              align="start"
+                              className="max-w-md bg-popover text-popover-foreground border shadow-lg rounded-md p-2 text-sm"
+                            >
+                              <p className="whitespace-pre-wrap">{transaction.notes}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        ) : (
+                          <p className="max-w-xs truncate">{transaction.notes}</p>
+                        )
+                      ) : (
+                        "-"
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
@@ -542,7 +571,7 @@ export default function Home() {
                             <Icons.trash className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[60]">
+                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]"> {/* Ensure z-index is high enough */}
                           <AlertDialogHeader>
                             <AlertDialogTitle className="text-card-foreground">Delete Transaction?</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground">
@@ -560,143 +589,143 @@ export default function Home() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {spendingData.length > 0 && (
-        <Card className="h-[450px] sm:h-[550px] rounded-xl shadow-lg mb-6 sm:mb-8 bg-card/80 backdrop-blur-md">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Spending by Category ({displayCurrencySymbol})</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[calc(100%-5rem)] pt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 30 }}>
-                <Pie
-                  data={spendingData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
-                    const RADIAN = Math.PI / 180;
-                    const radiusPercentLabel = innerRadius + (outerRadius - innerRadius) * 0.45;
-                    const xPercentLabel = cx + radiusPercentLabel * Math.cos(-midAngle * RADIAN);
-                    const yPercentLabel = cy + radiusPercentLabel * Math.sin(-midAngle * RADIAN);
-                
-                    const radiusNameLabel = outerRadius + (window.innerWidth < 640 ? 20 : 30);
-                    const xNameLabel = cx + radiusNameLabel * Math.cos(-midAngle * RADIAN);
-                    const yNameLabel = cy + radiusNameLabel * Math.sin(-midAngle * RADIAN);
-                
-                    const displayPercentVal = (typeof percent === 'number' && !isNaN(percent)) ? (percent * 100).toFixed(0) : '0';
-                    
-                    if (typeof value === 'number' && value === 0) return null; // Don't label zero-value slices
-                    if (spendingData.length > 5 && parseFloat(displayPercentVal) < 2) return null; 
-                
-                    return (
-                      <>
-                        <text
-                          x={xPercentLabel}
-                          y={yPercentLabel}
-                          fill="hsl(var(--card-foreground))"
-                          textAnchor="middle"
-                          dominantBaseline="central"
-                          fontSize={window.innerWidth < 640 ? 10 : 12}
-                          fontWeight="bold"
-                          className="opacity-90 pointer-events-none"
-                        >
-                          {`${displayPercentVal}%`}
-                        </text>
-                        <text
-                          x={xNameLabel}
-                          y={yNameLabel}
-                          fill="hsl(var(--foreground))"
-                          textAnchor={xNameLabel > cx ? "start" : "end"}
-                          dominantBaseline="central"
-                          fontSize={window.innerWidth < 640 ? 10 : 14}
-                          className="font-medium pointer-events-none"
-                        >
-                          {name}
-                        </text>
-                      </>
-                    );
-                  }}
-                  outerRadius="70%"
-                  fill="#8884d8"
-                  dataKey="value"
-                  nameKey="name"
-                  stroke="hsl(var(--background))"
-                  strokeWidth={2}
-                >
-                  {spendingData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
-                      className="focus:outline-none transition-opacity duration-200 hover:opacity-70 cursor-pointer"
-                      tabIndex={0}
-                      aria-label={`${entry.name}: ${displayCurrencySymbol}${entry.value.toFixed(2)}`}
-                    />
-                  ))}
-                </Pie>
-                <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
-                <Legend
-                  layout="horizontal"
-                  verticalAlign="bottom"
-                  align="center"
-                  wrapperStyle={{
-                    fontSize: window.innerWidth < 640 ? '10px' : '12px', 
-                    paddingTop: '15px', 
-                    color: "hsl(var(--foreground))",
-                  }}
-                  iconSize={window.innerWidth < 640 ? 8 : 10} 
-                  formatter={(value) => (
-                    <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
-      )}
-      <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
-        <div className="container mx-auto flex flex-col items-center space-y-4">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
-                <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
-              <AlertDialogHeader>
-                <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription className="text-muted-foreground">
-                  This action cannot be undone. This will permanently delete all
-                  your transaction data from the application.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleResetData}
-                  className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                >
-                  Continue
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <p className="text-xs text-muted-foreground/80">
-            (Tip: Press Shift + S + D to reset data without confirmation)
-          </p>
-          <p className="text-sm text-foreground">
-            © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
-          </p>
-        </div>
-      </footer>
-    </div>
+
+        {spendingData.length > 0 && (
+          <Card className="h-[450px] sm:h-[550px] rounded-xl shadow-lg mb-6 sm:mb-8 bg-card/80 backdrop-blur-md">
+            <CardHeader>
+              <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Spending by Category ({displayCurrencySymbol})</CardTitle>
+            </CardHeader>
+            <CardContent className="h-[calc(100%-5rem)] pt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 10, right: 20, left: 20, bottom: 30 }}>
+                  <Pie
+                    data={spendingData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
+                      const RADIAN = Math.PI / 180;
+                      const radiusPercentLabel = innerRadius + (outerRadius - innerRadius) * 0.45;
+                      const xPercentLabel = cx + radiusPercentLabel * Math.cos(-midAngle * RADIAN);
+                      const yPercentLabel = cy + radiusPercentLabel * Math.sin(-midAngle * RADIAN);
+
+                      const radiusNameLabel = outerRadius + (window.innerWidth < 640 ? 20 : 30);
+                      const xNameLabel = cx + radiusNameLabel * Math.cos(-midAngle * RADIAN);
+                      const yNameLabel = cy + radiusNameLabel * Math.sin(-midAngle * RADIAN);
+
+                      const displayPercentVal = (typeof percent === 'number' && !isNaN(percent)) ? (percent * 100).toFixed(0) : '0';
+
+                      if (typeof value === 'number' && value === 0) return null; 
+                      if (spendingData.length > 5 && parseFloat(displayPercentVal) < 2) return null;
+
+                      return (
+                        <>
+                          <text
+                            x={xPercentLabel}
+                            y={yPercentLabel}
+                            fill="hsl(var(--card-foreground))"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize={window.innerWidth < 640 ? 10 : 12}
+                            fontWeight="bold"
+                            className="opacity-90 pointer-events-none"
+                          >
+                            {`${displayPercentVal}%`}
+                          </text>
+                          <text
+                            x={xNameLabel}
+                            y={yNameLabel}
+                            fill="hsl(var(--foreground))"
+                            textAnchor={xNameLabel > cx ? "start" : "end"}
+                            dominantBaseline="central"
+                            fontSize={window.innerWidth < 640 ? 10 : 14}
+                            className="font-medium pointer-events-none"
+                          >
+                            {name}
+                          </text>
+                        </>
+                      );
+                    }}
+                    outerRadius="70%"
+                    fill="#8884d8"
+                    dataKey="value"
+                    nameKey="name"
+                    stroke="hsl(var(--background))"
+                    strokeWidth={2}
+                  >
+                    {spendingData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                        className="focus:outline-none transition-opacity duration-200 hover:opacity-70 cursor-pointer"
+                        tabIndex={0}
+                        aria-label={`${entry.name}: ${displayCurrencySymbol}${entry.value.toFixed(2)}`}
+                      />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                  <Legend
+                    layout="horizontal"
+                    verticalAlign="bottom"
+                    align="center"
+                    wrapperStyle={{
+                      fontSize: window.innerWidth < 640 ? '10px' : '12px',
+                      paddingTop: '15px',
+                      color: "hsl(var(--foreground))",
+                    }}
+                    iconSize={window.innerWidth < 640 ? 8 : 10}
+                    formatter={(value) => (
+                      <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
+                    )}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+        <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
+          <div className="container mx-auto flex flex-col items-center space-y-4">
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
+                  <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-muted-foreground">
+                    This action cannot be undone. This will permanently delete all
+                    your transaction data from the application.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleResetData}
+                    className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                  >
+                    Continue
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <p className="text-xs text-muted-foreground/80">
+              (Tip: Press Shift + S + D to reset data without confirmation)
+            </p>
+            <p className="text-sm text-foreground">
+              © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
+            </p>
+          </div>
+        </footer>
+      </div>
+    </TooltipProvider>
   );
 }
-
