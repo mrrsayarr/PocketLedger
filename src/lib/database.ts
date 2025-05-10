@@ -36,15 +36,13 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
           password TEXT NOT NULL
         )
       `);
-      // Ensure a default user row exists if needed for password logic,
-      // or let setPassword handle the first insert.
-      // Current setPassword logic handles inserting if user doesn't exist.
 
-    } catch (error) {
+    } catch (error: any) { // Explicitly type error as any to access .message
       console.error('Failed to initialize database:', error);
-      // Reset dbInstance to null if initialization fails, so it can be retried.
+      const originalErrorMessage = error.message || 'No original error message provided by the driver.';
       dbInstance = null; 
-      throw new Error('Database initialization failed. Please check server logs.');
+      // Throw a more detailed error message
+      throw new Error(`Database initialization failed. Please check server logs. Original error: ${originalErrorMessage}`);
     }
   }
   return dbInstance;
@@ -80,7 +78,7 @@ export const getAllTransactionsFromDb = async () => {
   );
   return transactionsFromDb.map(transaction => ({
     ...transaction,
-    date: new Date(transaction.date),
+    date: new Date(transaction.date), // Ensure date is a Date object
   }));
 };
 
@@ -128,7 +126,6 @@ export const getSpendingByCategoryFromDb = async (currency: string): Promise<{ c
 export const resetAllDataInDb = async () => {
   const db = await getDbInstance();
   await db.run('DELETE FROM transactions');
-  // Also reset users table if all data reset implies user password reset
   await db.run('DELETE FROM users'); 
 };
 
@@ -146,7 +143,6 @@ export const setPassword = async (password: string): Promise<void> => {
   if (user) {
     await db.run('UPDATE users SET password = ? WHERE id = 1', password);
   } else {
-    // If no user with ID 1, insert. This is important for first-time setup.
     await db.run('INSERT INTO users (id, password) VALUES (1, ?)', password);
   }
 };
@@ -156,9 +152,7 @@ export const checkPassword = async (passwordToCheck: string): Promise<boolean> =
   const db = await getDbInstance();
   const user = await db.get('SELECT password FROM users WHERE id = 1');
   if (user && user.password) {
-    // IMPORTANT: In a real application, passwords should be hashed.
-    // This is a simplified direct comparison.
     return user.password === passwordToCheck;
   }
-  return false; // No password set or user not found
+  return false; 
 };
