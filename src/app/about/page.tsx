@@ -73,7 +73,7 @@ export default function AboutPage() {
               Only you can access your data. Since the data is stored locally in your browser, it is sandboxed and cannot be accessed by other websites or users on other devices. PocketLedger Pro does not have any server-side components that store or process your personal financial information.
             </p>
              <p>
-              <strong>Data Persistence:</strong>
+              <strong><u>Data Persistence:</u></strong>
               <br />
               Your data will persist in your browser as long as you don&apos;t clear your browser&apos;s site data for PocketLedger Pro. If you use a different browser or a different device, the data will not be synchronized as it is entirely local to the specific browser instance you used to enter it.
             </p>

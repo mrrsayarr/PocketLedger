@@ -73,7 +73,7 @@ export default function AboutTrPage() {
               Verilerinize yalnızca siz erişebilirsiniz. Veriler tarayıcınızda yerel olarak saklandığından, sanal alana alınır ve diğer web siteleri veya diğer cihazlardaki kullanıcılar tarafından erişilemez. PocketLedger Pro'nun kişisel mali bilgilerinizi saklayan veya işleyen herhangi bir sunucu tarafı bileşeni yoktur.
             </p>
              <p>
-              <strong>Veri Kalıcılığı:</strong>
+              <strong><u>Veri Kalıcılığı:</u></strong>
               <br />
               PocketLedger Pro için tarayıcınızın site verilerini temizlemediğiniz sürece verileriniz tarayıcınızda kalacaktır. Farklı bir tarayıcı veya farklı bir cihaz kullanırsanız, veriler girdiğiniz belirli tarayıcı örneğine tamamen yerel olduğu için senkronize edilmeyecektir.
             </p>

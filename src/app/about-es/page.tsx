@@ -73,7 +73,7 @@ export default function AboutEsPage() {
               Solo tú puedes acceder a tus datos. Dado que los datos se almacenan localmente en tu navegador, están aislados y no pueden ser accedidos por otros sitios web o usuarios en otros dispositivos. PocketLedger Pro no tiene ningún componente del lado del servidor que almacene o procese tu información financiera personal.
             </p>
              <p>
-              <strong>Persistencia de Datos:</strong>
+              <strong><u>Persistencia de Datos:</u></strong>
               <br />
               Tus datos persistirán en tu navegador siempre y cuando no borres los datos del sitio de tu navegador para PocketLedger Pro. Si utilizas un navegador diferente o un dispositivo diferente, los datos no se sincronizarán, ya que son completamente locales a la instancia específica del navegador que utilizaste para ingresarlos.
             </p>
