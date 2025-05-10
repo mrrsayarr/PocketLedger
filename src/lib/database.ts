@@ -38,11 +38,32 @@ const initializeDatabase = async (): Promise<SQLiteDatabase> => {
       category TEXT NOT NULL,
       amount REAL NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-      currency TEXT NOT NULL DEFAULT 'TRY',
+      -- currency TEXT NOT NULL DEFAULT 'TRY', -- Base definition, will be ensured by migration logic below
       notes TEXT
     )
   `);
-  console.log("'transactions' table ensured.");
+  console.log("'transactions' table ensured (created if not exists).");
+
+  // Check and add 'currency' column to 'transactions' if it doesn't exist
+  try {
+    const tableInfo = await db.all(`PRAGMA table_info(transactions);`);
+    // Cast tableInfo to an array of objects with a 'name' property
+    const columns = tableInfo as Array<{ name: string; [key: string]: any }>;
+    const currencyColumnExists = columns.some(column => column.name === 'currency');
+    
+    if (!currencyColumnExists) {
+      console.log("'transactions' table exists but 'currency' column is missing. Attempting to add it.");
+      await db.exec(`ALTER TABLE transactions ADD COLUMN currency TEXT NOT NULL DEFAULT 'TRY';`);
+      console.log("'currency' column added to 'transactions' table successfully.");
+    } else {
+      console.log("'currency' column already exists in 'transactions' table.");
+    }
+  } catch (e: any) {
+    // This might happen if the table 'transactions' itself doesn't exist yet (which CREATE TABLE handles),
+    // or other PRAGMA/ALTER errors.
+    console.warn("Could not check/add 'currency' column to 'transactions', this might be normal if table is new or error during alter:", e.message);
+  }
+
 
   await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -116,9 +137,14 @@ export const addTransactionToDb = async (date: string, category: string, amount:
     
     if (result.lastID === undefined || (typeof result.changes === 'number' && result.changes === 0)) {
         console.error('Transaction insert operation made no changes or lastID is undefined. This might indicate an issue.', result);
-        throw new Error('Insert operation reported 0 rows affected or failed to return lastID. Transaction may not have been saved.');
+        // It's possible for lastID to be undefined and changes to be 1 if PK is not autoincrement or other specific cases.
+        // However, for this schema, lastID should be populated on successful insert.
+        // The primary concern is if changes is 0.
+        if (typeof result.changes === 'number' && result.changes === 0) {
+          throw new Error('Insert operation reported 0 rows affected. Transaction may not have been saved.');
+        }
     }
-    console.log(`Transaction added successfully with ID: ${result.lastID}`);
+    console.log(`Transaction added successfully. Last ID: ${result.lastID}, Changes: ${result.changes}`);
   } catch (insertError: any) {
     console.error('Error during db.run for INSERT in addTransactionToDb:', insertError);
     const errorCode = insertError.code ? ` (SQLite Code: ${insertError.code})` : '';
@@ -196,16 +222,60 @@ export const getSpendingByCategoryFromDb = async (currency: string): Promise<{ c
 
 export const resetAllDataInDb = async () => {
   const db = await getDbInstance();
-  console.log('Attempting to reset all data in DB.');
-  await db.run('DELETE FROM transactions');
-  console.log("'transactions' table cleared.");
-  await db.run('DELETE FROM users'); 
-  console.log("'users' table cleared.");
+  console.log('Attempting to reset all data in DB (transactions and users tables).');
+  
+  // More robust reset: drop tables and recreate them to ensure schema is fresh
+  // This is more aggressive but helps avoid schema mismatch issues during development.
+  try {
+    console.log("Dropping 'transactions' table if it exists...");
+    await db.exec('DROP TABLE IF EXISTS transactions;');
+    console.log("'transactions' table dropped.");
+
+    console.log("Dropping 'users' table if it exists...");
+    await db.exec('DROP TABLE IF EXISTS users;');
+    console.log("'users' table dropped.");
+
+    // Re-initialize tables with the current schema definitions
+    // This will call the CREATE TABLE statements again
+    console.log("Re-initializing database tables...");
+    // We can call initializeDatabase, but it might lead to recursion or issues with global promise.
+    // Simpler to just re-run the CREATE TABLE commands here or parts of initializeDatabase.
+    // For now, relying on the next getDbInstance() call to re-initialize.
+    // A more explicit re-creation might be:
+    await db.exec(`
+      CREATE TABLE transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL,
+        category TEXT NOT NULL,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+        currency TEXT NOT NULL DEFAULT 'TRY',
+        notes TEXT
+      )
+    `);
+    console.log("'transactions' table re-created.");
+    await db.exec(`
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        password TEXT NOT NULL
+      )
+    `);
+    console.log("'users' table re-created.");
+
+  } catch (error: any) {
+    console.error("Error during table drop/recreate in resetAllDataInDb:", error);
+    // If drop/recreate fails, fall back to deleting data
+    console.log("Fallback: Deleting data from tables instead of dropping.");
+    await db.run('DELETE FROM transactions').catch(e => console.error("Failed to delete from transactions during fallback:", e));
+    await db.run('DELETE FROM users').catch(e => console.error("Failed to delete from users during fallback:", e));
+  }
+  
   // Optional: Resetting sequence for autoincrement IDs if desired (SQLite specific)
-  // await db.run("DELETE FROM sqlite_sequence WHERE name='transactions';");
-  // await db.run("DELETE FROM sqlite_sequence WHERE name='users';");
-  // console.log("Autoincrement sequences reset (optional step).");
-  console.log('All data (transactions and users) reset in DB.');
+  // Only do this if tables were not dropped and recreated.
+  // await db.run("DELETE FROM sqlite_sequence WHERE name='transactions';").catch(e => {});
+  // await db.run("DELETE FROM sqlite_sequence WHERE name='users';").catch(e => {});
+  // console.log("Autoincrement sequences reset (if applicable).");
+  console.log('All data reset in DB completed.');
 };
 
 export const isPasswordSet = async (): Promise<boolean> => {
@@ -242,5 +312,3 @@ export const checkPassword = async (passwordToCheck: string): Promise<boolean> =
   console.log('No password found for user ID 1 or user does not exist.');
   return false; 
 };
-
-    
