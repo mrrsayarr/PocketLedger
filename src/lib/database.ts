@@ -12,13 +12,14 @@ let dbInstance: SQLiteDatabase | null = null;
 const getDbInstance = async (): Promise<SQLiteDatabase> => {
   if (!dbInstance) {
     try {
-      dbInstance = await open({
+      // Try to open the database
+      const newDbInstance = await open({
         filename: DB_FILE_PATH,
         driver: sqlite3.Database,
       });
 
       // Initialize tables if they don't exist
-      await dbInstance.exec(`
+      await newDbInstance.exec(`
         CREATE TABLE IF NOT EXISTS transactions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           date TEXT NOT NULL,
@@ -30,21 +31,32 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
         )
       `);
 
-      await dbInstance.exec(`
+      await newDbInstance.exec(`
         CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           password TEXT NOT NULL
         )
       `);
+      
+      // If all initializations are successful, assign to the global instance
+      dbInstance = newDbInstance;
 
-    } catch (error: any) { // Explicitly type error as any to access .message
-      console.error('Failed to initialize database:', error);
+    } catch (error: any) {
+      console.error('Failed to initialize database during open/exec:', error);
       const originalErrorMessage = error.message || 'No original error message provided by the driver.';
-      dbInstance = null; 
-      // Throw a more detailed error message
-      throw new Error(`Database initialization failed. Please check server logs. Original error: ${originalErrorMessage}`);
+      dbInstance = null; // Ensure dbInstance is null if any part of initialization fails
+      throw new Error(`Database initialization or table creation failed. Please check server logs. Original error: ${originalErrorMessage}`);
     }
   }
+  
+  // After the initialization block, if dbInstance is still null, it means a persistent error occurred.
+  if (!dbInstance) {
+      // This should ideally not be reached if the above try-catch correctly throws and nullifies.
+      // However, it's a safeguard.
+      console.error("dbInstance is null after initialization attempt. This indicates a persistent issue and a previous error should have been thrown.");
+      throw new Error("Database instance is not available. Initialization may have failed previously.");
+  }
+
   return dbInstance;
 };
 
