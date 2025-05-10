@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Metadata, Viewport } from 'next';
@@ -256,16 +255,15 @@ export default function Home() {
             pressedKeys.add(event.key.toLowerCase());
         }
 
-        // Check for Ctrl + S + D
-        if (event.ctrlKey && pressedKeys.has('s') && pressedKeys.has('d')) {
-            // Ensure this event is for 's' or 'd' to finalize the combo while Ctrl is held.
+        // Check for Shift + S + D
+        if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
+            // Ensure this event is for 's' or 'd' to finalize the combo while Shift is held.
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
-                event.preventDefault(); // Prevent default browser actions (e.g., Ctrl+S for save)
-                // console.log('Ctrl+S+D shortcut triggered for Reset All Data');
+                event.preventDefault(); // Prevent default browser actions
+                // console.log('Shift+S+D shortcut triggered for Reset All Data');
                 handleResetData(); // Call directly without confirmation
                 
                 // Clear 's' and 'd' from the set to require them to be re-pressed for another trigger.
-                // This prevents continuous firing if Ctrl+S+D are held down.
                 pressedKeys.delete('s');
                 pressedKeys.delete('d');
             }
@@ -637,4 +635,3 @@ export default function Home() {
     </div>
   );
 }
-
