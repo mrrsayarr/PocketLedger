@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Metadata, Viewport } from 'next';
@@ -58,6 +59,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 
 // Define type for a transaction
@@ -67,8 +75,28 @@ type Transaction = {
   category: string;
   amount: number;
   type: "income" | "expense";
+  currency: string;
   notes?: string;
 };
+
+type Currency = {
+  code: string;
+  symbol: string;
+  name: string;
+};
+
+const supportedCurrencies: Currency[] = [
+  { code: "TRY", symbol: "₺", name: "Turkish Lira" },
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+];
+
+const getCurrencySymbol = (currencyCode: string): string => {
+  const currency = supportedCurrencies.find(c => c.code === currencyCode);
+  return currency ? currency.symbol : currencyCode;
+};
+
 
 // Predefined categories
 const categories = [
@@ -95,21 +123,25 @@ const COLORS = [
   "#FFC107", "#FF9800", "#FF5722", "#9E9E9E", "#3F51B5",
 ];
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, label, displayCurrencySymbol }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const name = data.name;
     const value = data.value;
     const percent = payload[0].percent;
 
+    const displayPercent = (typeof percent === 'number' && !isNaN(percent)) 
+      ? (percent * 100).toFixed(2) 
+      : '0.00';
+
     return (
       <div className="bg-background/80 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl text-sm">
         <p className="font-bold text-foreground mb-1">{name}</p>
         <p className="text-muted-foreground">
-          Amount: <span className="font-medium text-foreground">₺{value.toFixed(2)}</span>
+          Amount: <span className="font-medium text-foreground">{displayCurrencySymbol}{value.toFixed(2)}</span>
         </p>
         <p className="text-muted-foreground">
-          Percentage: <span className="font-medium text-foreground">{(percent * 100).toFixed(2)}%</span>
+          Percentage: <span className="font-medium text-foreground">{displayPercent}%</span>
         </p>
       </div>
     );
@@ -125,34 +157,36 @@ export default function Home() {
   const [amount, setAmount] = useState<number | undefined>(0);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
+  const [transactionCurrency, setTransactionCurrency] = useState<string>("TRY");
+  const [displayCurrency, setDisplayCurrency] = useState<string>("TRY");
 
   const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
     setTransactions(transactionsFromDb);
   }, []);
 
-  const loadDashboardData = useCallback(async () => {
-    const balance = await getTotalBalanceFromDb();
+  const loadDashboardData = useCallback(async (currencyToDisplay: string) => {
+    const balance = await getTotalBalanceFromDb(currencyToDisplay);
     setCurrentBalance(balance);
-    const income = await getTotalIncomeFromDb();
+    const income = await getTotalIncomeFromDb(currencyToDisplay);
     setTotalIncome(income);
-    const expenses = await getTotalExpenseFromDb();
+    const expenses = await getTotalExpenseFromDb(currencyToDisplay);
     setTotalExpenses(expenses);
-    const spending = await getSpendingByCategoryFromDb();
+    const spending = await getSpendingByCategoryFromDb(currencyToDisplay);
     setSpendingData(
       spending.map((item) => ({ name: item.category, value: item.total }))
     );
   }, []);
 
-  const loadInitialData = useCallback(async () => {
+  const loadInitialData = useCallback(async (currentDisplayCurrency: string) => {
     await loadTransactions();
-    await loadDashboardData();
+    await loadDashboardData(currentDisplayCurrency);
   }, [loadTransactions, loadDashboardData]);
   
   useEffect(() => {
@@ -167,15 +201,18 @@ export default function Home() {
           document.documentElement.classList.remove("dark");
         }
       } else {
-        // Default to dark mode if no preference is stored
         setDarkMode(true);
         document.documentElement.classList.add("dark");
         localStorage.setItem("darkMode", "true");
       }
-      await loadInitialData();
+
+      const storedDisplayCurrency = localStorage.getItem("displayCurrency");
+      const initialDisplayCurrency = storedDisplayCurrency || "TRY";
+      setDisplayCurrency(initialDisplayCurrency);
+      await loadInitialData(initialDisplayCurrency);
     };
     initializeApp();
-  }, [loadInitialData]);
+  }, [loadInitialData]); // Removed displayCurrency from deps to avoid loop on init
   
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode.toString());
@@ -185,6 +222,14 @@ export default function Home() {
       document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    if (displayCurrency) {
+        localStorage.setItem("displayCurrency", displayCurrency);
+        loadDashboardData(displayCurrency);
+    }
+  }, [displayCurrency, loadDashboardData]);
+
 
   const addTransaction = async () => {
     if (!date || !category || amount === undefined || amount === null) {
@@ -209,6 +254,7 @@ export default function Home() {
       category,
       amount,
       type,
+      transactionCurrency,
       notes
     );
     setDate(new Date());
@@ -216,12 +262,13 @@ export default function Home() {
     setAmount(0);
     setNotes("");
     setType("expense");
+    setTransactionCurrency("TRY"); // Reset form currency to default
     toast({
       title: "Success",
       description: "Transaction added successfully.",
     });
-    await loadTransactions();
-    await loadDashboardData();
+    await loadTransactions(); // Reload all transactions
+    await loadDashboardData(displayCurrency); // Reload dashboard for the current display currency
   };
 
   const deleteTransaction = async (id: number) => {
@@ -231,7 +278,7 @@ export default function Home() {
       description: "Transaction deleted successfully.",
     });
     await loadTransactions();
-    await loadDashboardData();
+    await loadDashboardData(displayCurrency);
   };
 
   const toggleDarkMode = () => {
@@ -244,8 +291,8 @@ export default function Home() {
       title: "Success!",
       description: "All your data has been reset.",
     });
-    await loadInitialData();
-  }, [toast, loadInitialData]);
+    await loadInitialData(displayCurrency);
+  }, [toast, loadInitialData, displayCurrency]);
 
   useEffect(() => {
     const pressedKeys = new Set<string>();
@@ -256,10 +303,12 @@ export default function Home() {
         }
 
         if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
+            // Check if 's' or 'd' is the key causing the event to prevent multiple triggers
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
                 event.preventDefault(); 
                 handleResetData(); 
                 
+                // Clear only the specific keys that triggered the shortcut
                 pressedKeys.delete('s');
                 pressedKeys.delete('d');
             }
@@ -279,6 +328,8 @@ export default function Home() {
     };
   }, [handleResetData]);
 
+  const displayCurrencySymbol = getCurrencySymbol(displayCurrency);
+
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
@@ -288,15 +339,27 @@ export default function Home() {
           <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
           PocketLedger Pro
         </h1>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           <Link href="/notes" asChild>
-            <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all">
-              <Icons.notebook className="mr-2 h-5 w-5" />
+            <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+              <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               My Notes
             </Button>
           </Link>
-          <div className="flex items-center space-x-2">
-            <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground">
+           <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
+            <SelectTrigger className="w-[100px] sm:w-[120px] rounded-lg shadow-md text-xs sm:text-sm h-9 sm:h-10">
+              <SelectValue placeholder="Currency" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg">
+              {supportedCurrencies.map((currency) => (
+                <SelectItem key={currency.code} value={currency.code} className="text-xs sm:text-sm">
+                  {currency.code} ({currency.symbol})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex items-center space-x-1 sm:space-x-2">
+            <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
               {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
             </Label>
             <Switch
@@ -313,26 +376,26 @@ export default function Home() {
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Current Balance</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Current Balance</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl sm:text-3xl font-bold text-card-foreground">
-            ₺{currentBalance.toFixed(2)}
+          <CardContent className="text-xl sm:text-3xl font-bold text-card-foreground">
+            {displayCurrencySymbol}{currentBalance.toFixed(2)}
           </CardContent>
         </Card>
         <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Total Income</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Income</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl sm:text-3xl font-bold text-[hsl(var(--income))]">
-            ₺{totalIncome.toFixed(2)}
+          <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--income))]">
+            {displayCurrencySymbol}{totalIncome.toFixed(2)}
           </CardContent>
         </Card>
         <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
           <CardHeader className="pb-2">
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Total Expenses</CardTitle>
+            <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Expenses</CardTitle>
           </CardHeader>
-          <CardContent className="text-2xl sm:text-3xl font-bold text-[hsl(var(--expense))]">
-            ₺{totalExpenses.toFixed(2)}
+          <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--expense))]">
+            {displayCurrencySymbol}{totalExpenses.toFixed(2)}
           </CardContent>
         </Card>
       </section>
@@ -359,7 +422,7 @@ export default function Home() {
                 <Label htmlFor="category-select" className="mb-1 font-medium text-card-foreground">Category</Label>
                 <select
                   id="category-select"
-                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10"
+                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   aria-label="Select transaction category"
@@ -371,23 +434,40 @@ export default function Home() {
                   ))}
                 </select>
               </div>
-              <div>
-                <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount (₺)</Label>
-                <Input
-                  type="number"
-                  id="amount-input"
-                  value={amount === undefined || amount === 0 ? "" : amount.toString()}
-                  onChange={(e) => setAmount(e.target.value === "" ? undefined : Number(e.target.value))}
-                  className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all"
-                  placeholder="e.g. 100.50"
-                  aria-label="Enter transaction amount"
-                />
+               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
+                  <Input
+                    type="number"
+                    id="amount-input"
+                    value={amount === undefined || amount === 0 ? "" : amount.toString()}
+                    onChange={(e) => setAmount(e.target.value === "" ? undefined : Number(e.target.value))}
+                    className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
+                    placeholder="e.g. 100.50"
+                    aria-label="Enter transaction amount"
+                  />
+                </div>
+                <div>
+                    <Label htmlFor="transaction-currency-select" className="mb-1 font-medium text-card-foreground">Currency</Label>
+                    <Select value={transactionCurrency} onValueChange={setTransactionCurrency}>
+                        <SelectTrigger className="w-full rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10">
+                        <SelectValue placeholder="Currency" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-lg">
+                        {supportedCurrencies.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code} className="text-sm">
+                            {currency.code} ({currency.symbol})
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                </div>
               </div>
               <div>
                 <Label htmlFor="type-select" className="mb-1 font-medium text-card-foreground">Type</Label>
                 <select
                   id="type-select"
-                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10"
+                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
                   value={type}
                   onChange={(e) => setType(e.target.value as "income" | "expense")}
                   aria-label="Select transaction type"
@@ -403,13 +483,13 @@ export default function Home() {
                 id="notes-textarea"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all min-h-[80px]"
+                className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all min-h-[80px] text-sm"
                 placeholder="Add any relevant notes..."
                 aria-label="Enter transaction notes"
               />
             </div>
           </div>
-          <Button className="mt-6 w-full md:w-auto rounded-lg shadow-md text-lg py-3 px-6 bg-primary hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105" onClick={addTransaction}>
+          <Button className="mt-6 w-full md:w-auto rounded-lg shadow-md text-base sm:text-lg py-2.5 sm:py-3 px-5 sm:px-6 bg-primary hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105" onClick={addTransaction}>
             Add Transaction
           </Button>
         </CardContent>
@@ -441,22 +521,22 @@ export default function Home() {
               )}
               {transactions.map((transaction) => (
                 <TableRow key={transaction.id} className="hover:bg-muted/30 transition-colors duration-200 ease-in-out">
-                  <TableCell className="text-foreground whitespace-nowrap">
+                  <TableCell className="text-foreground whitespace-nowrap text-sm">
                     {format(new Date(transaction.date), "dd MMM yyyy")}
                   </TableCell>
-                  <TableCell className="text-foreground">{transaction.category}</TableCell>
+                  <TableCell className="text-foreground text-sm">{transaction.category}</TableCell>
                   <TableCell
                     className={cn(
-                      "text-right font-medium whitespace-nowrap",
+                      "text-right font-medium whitespace-nowrap text-sm",
                       transaction.type === "income"
                         ? "text-[hsl(var(--income))]"
                         : "text-[hsl(var(--expense))]"
                     )}
                   >
                     {transaction.type === "income" ? "+" : "-"}
-                    ₺{transaction.amount.toFixed(2)}
+                    {getCurrencySymbol(transaction.currency)}{transaction.amount.toFixed(2)}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="text-sm">
                     <span
                       className={cn(
                         "px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap",
@@ -469,7 +549,7 @@ export default function Home() {
                         transaction.type.slice(1)}
                     </span>
                   </TableCell>
-                  <TableCell className="max-w-xs truncate text-foreground">{transaction.notes || "-"}</TableCell>
+                  <TableCell className="max-w-xs truncate text-foreground text-sm">{transaction.notes || "-"}</TableCell>
                   <TableCell className="text-right">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
@@ -511,7 +591,7 @@ export default function Home() {
       {spendingData.length > 0 && (
         <Card className="h-[450px] sm:h-[550px] rounded-xl shadow-lg mb-6 sm:mb-8 bg-card/80 backdrop-blur-md">
           <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Spending by Category</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Spending by Category ({displayCurrencySymbol})</CardTitle>
           </CardHeader>
           <CardContent className="h-[calc(100%-5rem)] pt-4">
             <ResponsiveContainer width="100%" height="100%">
@@ -531,7 +611,8 @@ export default function Home() {
                     const xName = cx + radiusName * Math.cos(-midAngle * RADIAN);
                     const yName = cy + radiusName * Math.sin(-midAngle * RADIAN);
                 
-                    if (percent * 100 < 2) return null; 
+                    const displayPercentVal = (typeof percent === 'number' && !isNaN(percent)) ? (percent * 100).toFixed(0) : '0';
+                    if (parseFloat(displayPercentVal) < 2 && spendingData.length > 5) return null; 
                 
                     return (
                       <>
@@ -545,7 +626,7 @@ export default function Home() {
                           fontWeight="bold"
                           className="opacity-90 pointer-events-none"
                         >
-                          {`${(percent * 100).toFixed(0)}%`}
+                          {`${displayPercentVal}%`}
                         </text>
                         <text
                           x={xName}
@@ -574,11 +655,11 @@ export default function Home() {
                       fill={COLORS[index % COLORS.length]}
                       className="focus:outline-none transition-opacity duration-200 hover:opacity-70 cursor-pointer"
                       tabIndex={0}
-                      aria-label={`${entry.name}: ₺${entry.value.toFixed(2)}`}
+                      aria-label={`${entry.name}: ${displayCurrencySymbol}${entry.value.toFixed(2)}`}
                     />
                   ))}
                 </Pie>
-                <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                <RechartsTooltip content={<CustomTooltip displayCurrencySymbol={displayCurrencySymbol} />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
                 <Legend
                   layout="horizontal"
                   verticalAlign="bottom"
@@ -634,3 +715,4 @@ export default function Home() {
     </div>
   );
 }
+

@@ -30,6 +30,33 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+
+type Currency = {
+  code: string;
+  symbol: string;
+  name: string;
+};
+
+const supportedCurrencies: Currency[] = [
+  { code: "TRY", symbol: "₺", name: "Turkish Lira" },
+  { code: "USD", symbol: "$", name: "US Dollar" },
+  { code: "EUR", symbol: "€", name: "Euro" },
+  { code: "GBP", symbol: "£", name: "British Pound" },
+];
+
+const getCurrencySymbol = (currencyCode?: string): string => {
+  if (!currencyCode) return "";
+  const currency = supportedCurrencies.find(c => c.code === currencyCode);
+  return currency ? currency.symbol : currencyCode;
+};
 
 type Note = {
   id: string;
@@ -38,6 +65,7 @@ type Note = {
   assetType?: string; // e.g., Bitcoin, Gold, Stock Name
   quantity?: number;
   purchasePrice?: number;
+  currency?: string; // Added currency field
   createdAt: Date;
 };
 
@@ -50,6 +78,7 @@ export default function NotesPage() {
   const [newNoteAssetType, setNewNoteAssetType] = useState("");
   const [newNoteQuantity, setNewNoteQuantity] = useState<number | undefined>(undefined);
   const [newNotePurchasePrice, setNewNotePurchasePrice] = useState<number | undefined>(undefined);
+  const [newNoteCurrency, setNewNoteCurrency] = useState<string>("TRY"); // Default currency for new notes
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -96,6 +125,7 @@ export default function NotesPage() {
       assetType: newNoteAssetType.trim() || undefined,
       quantity: newNoteQuantity,
       purchasePrice: newNotePurchasePrice,
+      currency: newNotePurchasePrice !== undefined && newNoteAssetType.trim() ? newNoteCurrency : undefined,
       createdAt: new Date(),
     };
 
@@ -105,6 +135,7 @@ export default function NotesPage() {
     setNewNoteAssetType("");
     setNewNoteQuantity(undefined);
     setNewNotePurchasePrice(undefined);
+    setNewNoteCurrency("TRY"); // Reset to default currency
     toast({
       title: "Note Added",
       description: "Your financial note has been successfully added.",
@@ -137,7 +168,7 @@ export default function NotesPage() {
           <Icons.notebook className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
           Financial Notes
         </h1>
-        <Link href="/" asChild>
+        <Link href="/" passHref>
           <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all">
             <Icons.arrowLeft className="mr-2 h-5 w-5" />
             Back to Dashboard
@@ -162,7 +193,7 @@ export default function NotesPage() {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="note-asset-type" className="font-medium text-card-foreground">Asset Type (Optional)</Label>
               <select
@@ -191,8 +222,10 @@ export default function NotesPage() {
                 className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="note-purchase-price" className="font-medium text-card-foreground">Purchase Price (₺) (Optional)</Label>
+              <Label htmlFor="note-purchase-price" className="font-medium text-card-foreground">Purchase Price (Optional)</Label>
               <Input
                 id="note-purchase-price"
                 type="number"
@@ -202,7 +235,25 @@ export default function NotesPage() {
                 className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
               />
             </div>
+            { (newNotePurchasePrice !== undefined && newNoteAssetType.trim()) && (
+                 <div>
+                    <Label htmlFor="note-currency" className="font-medium text-card-foreground">Currency</Label>
+                    <Select value={newNoteCurrency} onValueChange={setNewNoteCurrency}>
+                        <SelectTrigger className="w-full rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all h-10">
+                        <SelectValue placeholder="Currency" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-lg">
+                        {supportedCurrencies.map((currency) => (
+                            <SelectItem key={currency.code} value={currency.code}>
+                            {currency.code} ({currency.symbol})
+                            </SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            )}
           </div>
+
 
           <div>
             <Label htmlFor="note-content" className="font-medium text-card-foreground">Note Content</Label>
@@ -279,7 +330,7 @@ export default function NotesPage() {
                     <p><span className="font-medium">Quantity:</span> {note.quantity}</p>
                     )}
                     {note.purchasePrice !== undefined && (
-                    <p><span className="font-medium">Purchase Price:</span> ₺{note.purchasePrice.toFixed(2)}</p>
+                    <p><span className="font-medium">Purchase Price:</span> {getCurrencySymbol(note.currency)}{note.purchasePrice.toFixed(2)}</p>
                     )}
                 </div>
                 )}
@@ -295,3 +346,4 @@ export default function NotesPage() {
     </div>
   );
 }
+
