@@ -11,14 +11,15 @@ let dbInstance: SQLiteDatabase | null = null;
 
 const getDbInstance = async (): Promise<SQLiteDatabase> => {
   if (!dbInstance) {
+    console.log("Attempting to open/initialize database at path:", DB_FILE_PATH);
     try {
-      // Try to open the database
+      // Assign to a temporary variable first
       const newDbInstance = await open({
         filename: DB_FILE_PATH,
         driver: sqlite3.Database,
       });
+      console.log('Database opened successfully.');
 
-      // Initialize tables if they don't exist
       await newDbInstance.exec(`
         CREATE TABLE IF NOT EXISTS transactions (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +31,7 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
           notes TEXT
         )
       `);
+      console.log("'transactions' table ensured.");
 
       await newDbInstance.exec(`
         CREATE TABLE IF NOT EXISTS users (
@@ -37,6 +39,7 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
           password TEXT NOT NULL
         )
       `);
+      console.log("'users' table ensured.");
       
       // If all initializations are successful, assign to the global instance
       dbInstance = newDbInstance;
@@ -49,10 +52,7 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
     }
   }
   
-  // After the initialization block, if dbInstance is still null, it means a persistent error occurred.
   if (!dbInstance) {
-      // This should ideally not be reached if the above try-catch correctly throws and nullifies.
-      // However, it's a safeguard.
       console.error("dbInstance is null after initialization attempt. This indicates a persistent issue and a previous error should have been thrown.");
       throw new Error("Database instance is not available. Initialization may have failed previously.");
   }
@@ -63,16 +63,42 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
 
 // Add a new transaction to the database
 export const addTransactionToDb = async (date: string, category: string, amount: number, type: 'income' | 'expense', currency: string, notes?: string) => {
-  const db = await getDbInstance();
-  await db.run(
-    'INSERT INTO transactions (date, category, amount, type, currency, notes) VALUES (?, ?, ?, ?, ?, ?)',
-    date,
-    category,
-    amount,
-    type,
-    currency,
-    notes
-  );
+  let db: SQLiteDatabase;
+  try {
+    db = await getDbInstance();
+    console.log('DB instance obtained for addTransactionToDb.');
+  } catch (initError: any) {
+    console.error('Failed to get DB instance in addTransactionToDb:', initError);
+    // This error will be caught by the caller (e.g., the page's server action)
+    throw new Error(`Database connection error before adding transaction: ${initError.message}`);
+  }
+
+  try {
+    console.log('Attempting to insert transaction with data:', { date, category, amount, type, currency, notes });
+    const result = await db.run(
+      'INSERT INTO transactions (date, category, amount, type, currency, notes) VALUES (?, ?, ?, ?, ?, ?)',
+      date,
+      category,
+      amount,
+      type,
+      currency,
+      notes || null // Ensure NULL is passed if notes is undefined/empty
+    );
+    console.log('Transaction insert attempt result (sqlite/driver specific):', result);
+    // Check if the insert actually changed any rows. For an INSERT, this should be 1.
+    // result.changes might be undefined for some drivers if the statement failed before execution.
+    if (typeof result.changes === 'number' && result.changes === 0) {
+        console.error('Transaction insert operation made no changes to the database. This might indicate an issue prior to execution or with the data itself.');
+        // This specific error might not be hit if db.run throws directly for constraint violations etc.
+        throw new Error('Insert operation reported 0 rows affected. Transaction may not have been saved.');
+    }
+    console.log('Transaction added/insert run in DB successfully.');
+  } catch (insertError: any) {
+    console.error('Error during db.run for INSERT in addTransactionToDb:', insertError);
+    // Include SQLite error code if available, which can be very helpful for debugging.
+    const errorCode = insertError.code ? ` (SQLite Code: ${insertError.code})` : '';
+    throw new Error(`Failed to execute insert transaction: ${insertError.message}${errorCode}`);
+  }
 };
 
 
@@ -138,7 +164,9 @@ export const getSpendingByCategoryFromDb = async (currency: string): Promise<{ c
 export const resetAllDataInDb = async () => {
   const db = await getDbInstance();
   await db.run('DELETE FROM transactions');
+  // Also reset users table if it's part of the full reset logic
   await db.run('DELETE FROM users'); 
+  console.log('All data (transactions and users) reset in DB.');
 };
 
 // Check if a password is set for the user (assuming user ID 1)
@@ -157,6 +185,7 @@ export const setPassword = async (password: string): Promise<void> => {
   } else {
     await db.run('INSERT INTO users (id, password) VALUES (1, ?)', password);
   }
+  console.log('Password set/updated in DB.');
 };
 
 // Check the provided password against the stored password for user ID 1
