@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -184,9 +183,12 @@ export default function Home() {
       const storedDarkMode = localStorage.getItem("darkMode");
       const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
       setDarkMode(initialDarkMode);
-      // Class application is handled by the useEffect hook observing `darkMode` state.
+      if (initialDarkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -694,25 +696,8 @@ export default function Home() {
             </CardContent>
           </Card>
         )}
-        <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
-          <div className="container mx-auto flex flex-col items-center space-y-4">
-             <div className="flex space-x-4">
-                <Link href="/about" passHref>
-                    <Button variant="link" className="text-primary hover:underline">
-                    About (English)
-                    </Button>
-                </Link>
-                <Link href="/about-tr" passHref>
-                    <Button variant="link" className="text-primary hover:underline">
-                    Hakkında (Türkçe)
-                    </Button>
-                </Link>
-                <Link href="/about-es" passHref>
-                    <Button variant="link" className="text-primary hover:underline">
-                    Acerca de (Español)
-                    </Button>
-                </Link>
-             </div>
+         <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
+          <div className="container mx-auto flex flex-col items-center space-y-6">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
@@ -741,15 +726,31 @@ export default function Home() {
             <p className="text-xs text-muted-foreground/80">
               (Tip: Press Shift + S + D to reset data without confirmation)
             </p>
-            <p className="text-sm text-foreground">
-              © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
-            </p>
+            <div className="w-full border-t border-border/30 pt-6 mt-2">
+              <div className="flex flex-wrap justify-center space-x-2 sm:space-x-4 mb-4">
+                  <Link href="/about" passHref>
+                      <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-1 sm:px-2">
+                      About (English)
+                      </Button>
+                  </Link>
+                  <Link href="/about-tr" passHref>
+                      <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-1 sm:px-2">
+                      Hakkında (Türkçe)
+                      </Button>
+                  </Link>
+                  <Link href="/about-es" passHref>
+                      <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-1 sm:px-2">
+                      Acerca de (Español)
+                      </Button>
+                  </Link>
+              </div>
+              <p className="text-sm text-foreground">
+                © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
+              </p>
+            </div>
           </div>
         </footer>
       </div>
     </TooltipProvider>
   );
 }
-
-
-
