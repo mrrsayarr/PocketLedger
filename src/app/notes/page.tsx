@@ -1,0 +1,297 @@
+
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Icons } from "@/components/icons";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import { format } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+type Note = {
+  id: string;
+  title: string;
+  content: string;
+  assetType?: string; // e.g., Bitcoin, Gold, Stock Name
+  quantity?: number;
+  purchasePrice?: number;
+  createdAt: Date;
+};
+
+const assetCategories = ["Cryptocurrency", "Stocks", "Bonds", "Real Estate", "Commodities", "Forex", "Other"];
+
+export default function NotesPage() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [newNoteTitle, setNewNoteTitle] = useState("");
+  const [newNoteContent, setNewNoteContent] = useState("");
+  const [newNoteAssetType, setNewNoteAssetType] = useState("");
+  const [newNoteQuantity, setNewNoteQuantity] = useState<number | undefined>(undefined);
+  const [newNotePurchasePrice, setNewNotePurchasePrice] = useState<number | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedNotes = localStorage.getItem("financialNotes");
+      if (storedNotes) {
+        try {
+          setNotes(
+            JSON.parse(storedNotes).map((note: any) => ({
+              ...note,
+              createdAt: new Date(note.createdAt),
+            }))
+          );
+        } catch (error) {
+          console.error("Failed to parse notes from localStorage:", error);
+          setNotes([]); // Fallback to empty array if parsing fails
+        }
+      }
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !isLoading) {
+      localStorage.setItem("financialNotes", JSON.stringify(notes));
+    }
+  }, [notes, isLoading]);
+
+  const handleAddNote = () => {
+    if (!newNoteTitle.trim() || !newNoteContent.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a title and content for your note.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newNote: Note = {
+      id: Date.now().toString(),
+      title: newNoteTitle.trim(),
+      content: newNoteContent.trim(),
+      assetType: newNoteAssetType.trim() || undefined,
+      quantity: newNoteQuantity,
+      purchasePrice: newNotePurchasePrice,
+      createdAt: new Date(),
+    };
+
+    setNotes((prevNotes) => [newNote, ...prevNotes]);
+    setNewNoteTitle("");
+    setNewNoteContent("");
+    setNewNoteAssetType("");
+    setNewNoteQuantity(undefined);
+    setNewNotePurchasePrice(undefined);
+    toast({
+      title: "Note Added",
+      description: "Your financial note has been successfully added.",
+    });
+  };
+
+  const handleDeleteNote = (id: string) => {
+    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
+    toast({
+      title: "Note Deleted",
+      description: "The note has been successfully deleted.",
+      variant: "destructive",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm">
+        <Icons.loader className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg text-foreground">Loading notes...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
+      <Toaster />
+      <header className="flex justify-between items-center mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
+          <Icons.notebook className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
+          Financial Notes
+        </h1>
+        <Link href="/" asChild>
+          <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all">
+            <Icons.arrowLeft className="mr-2 h-5 w-5" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </header>
+
+      <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+        <CardHeader>
+          <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Add New Financial Note</CardTitle>
+          <CardDescription>Keep track of your investments, assets, or other financial details.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="note-title" className="font-medium text-card-foreground">Note Title</Label>
+            <Input
+              id="note-title"
+              value={newNoteTitle}
+              onChange={(e) => setNewNoteTitle(e.target.value)}
+              placeholder="e.g., Bitcoin Purchase, Gold Investment"
+              className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="note-asset-type" className="font-medium text-card-foreground">Asset Type (Optional)</Label>
+              <select
+                  id="note-asset-type"
+                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10"
+                  value={newNoteAssetType}
+                  onChange={(e) => setNewNoteAssetType(e.target.value)}
+                  aria-label="Select asset type"
+                >
+                  <option value="">Select type (optional)</option>
+                  {assetCategories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+            </div>
+            <div>
+              <Label htmlFor="note-quantity" className="font-medium text-card-foreground">Quantity (Optional)</Label>
+              <Input
+                id="note-quantity"
+                type="number"
+                value={newNoteQuantity === undefined ? "" : newNoteQuantity}
+                onChange={(e) => setNewNoteQuantity(e.target.value === "" ? undefined : Number(e.target.value))}
+                placeholder="e.g., 0.5"
+                className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <Label htmlFor="note-purchase-price" className="font-medium text-card-foreground">Purchase Price (₺) (Optional)</Label>
+              <Input
+                id="note-purchase-price"
+                type="number"
+                value={newNotePurchasePrice === undefined ? "" : newNotePurchasePrice}
+                onChange={(e) => setNewNotePurchasePrice(e.target.value === "" ? undefined : Number(e.target.value))}
+                placeholder="e.g., 50000"
+                className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="note-content" className="font-medium text-card-foreground">Note Content</Label>
+            <Textarea
+              id="note-content"
+              value={newNoteContent}
+              onChange={(e) => setNewNoteContent(e.target.value)}
+              placeholder="Details about the asset, purchase date, strategy, etc."
+              className="min-h-[120px] rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={handleAddNote} className="w-full sm:w-auto rounded-lg shadow-md bg-primary hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105">
+            <Icons.plusCircle className="mr-2 h-5 w-5" />
+            Add Note
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <div className="space-y-6">
+        {notes.length === 0 ? (
+          <Card className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+            <CardContent className="py-10 text-center">
+              <Icons.fileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-card-foreground">No financial notes yet.</p>
+              <p className="text-muted-foreground">Add your first note using the form above.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          notes.map((note) => (
+            <Card key={note.id} className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md hover:shadow-2xl transition-shadow duration-300">
+              <CardHeader className="flex flex-row justify-between items-start pb-3">
+                <div>
+                  <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">{note.title}</CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground">
+                    {format(new Date(note.createdAt), "PPP p")}
+                  </CardDescription>
+                </div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                     <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-md">
+                        <Icons.trash className="h-4 w-4" />
+                      </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-card-foreground">Delete Note?</AlertDialogTitle>
+                      <AlertDialogDescription className="text-muted-foreground">
+                        Are you sure you want to delete the note titled "{note.title}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeleteNote(note.id)}
+                        className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </CardHeader>
+              <CardContent className="space-y-2 pt-0">
+                {note.assetType && (
+                  <p className="text-sm text-foreground">
+                    <span className="font-medium">Asset Type:</span> {note.assetType}
+                  </p>
+                )}
+                {(note.quantity !== undefined || note.purchasePrice !== undefined) && (
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground">
+                    {note.quantity !== undefined && (
+                    <p><span className="font-medium">Quantity:</span> {note.quantity}</p>
+                    )}
+                    {note.purchasePrice !== undefined && (
+                    <p><span className="font-medium">Purchase Price:</span> ₺{note.purchasePrice.toFixed(2)}</p>
+                    )}
+                </div>
+                )}
+                <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+      <footer className="mt-auto pt-8 pb-4 text-center text-muted-foreground text-sm">
+        <p>© {new Date().getFullYear()} PocketLedger Pro. All rights reserved.</p>
+      </footer>
+    </div>
+  );
+}

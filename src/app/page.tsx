@@ -96,7 +96,6 @@ const COLORS = [
   "#FFC107", "#FF9800", "#FF5722", "#9E9E9E", "#3F51B5",
 ];
 
-
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
@@ -127,7 +126,7 @@ export default function Home() {
   const [amount, setAmount] = useState<number | undefined>(0);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(true); // Default to true
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -136,12 +135,20 @@ export default function Home() {
   
   useEffect(() => {
     const initializeApp = async () => {
+      // Check localStorage for darkMode setting
       const storedDarkMode = localStorage.getItem("darkMode");
       if (storedDarkMode !== null) {
-        setDarkMode(storedDarkMode === "true");
+        const isDarkMode = storedDarkMode === "true";
+        setDarkMode(isDarkMode);
+        if (isDarkMode) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
       } else {
-        // Default to dark mode if nothing is stored
-        setDarkMode(true); 
+        // If no setting in localStorage, default to dark mode
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
         localStorage.setItem("darkMode", "true");
       }
       await loadInitialData();
@@ -150,6 +157,8 @@ export default function Home() {
   }, []);
   
   useEffect(() => {
+    // This effect runs when `darkMode` state changes
+    // It updates localStorage and the class on <html>
     localStorage.setItem("darkMode", darkMode.toString());
     if (darkMode) {
       document.documentElement.classList.add("dark");
@@ -251,7 +260,7 @@ export default function Home() {
           PocketLedger Pro
         </h1>
         <div className="flex items-center space-x-4">
-          <Link href="/notes" legacyBehavior>
+          <Link href="/notes" asChild>
             <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all">
               <Icons.notebook className="mr-2 h-5 w-5" />
               My Notes
@@ -469,7 +478,7 @@ export default function Home() {
                     const xPercent = cx + radiusPercent * Math.cos(-midAngle * RADIAN);
                     const yPercent = cy + radiusPercent * Math.sin(-midAngle * RADIAN);
                 
-                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30);
+                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30); // Adjusted for responsiveness
                     const xName = cx + radiusName * Math.cos(-midAngle * RADIAN);
                     const yName = cy + radiusName * Math.sin(-midAngle * RADIAN);
                 
@@ -483,7 +492,7 @@ export default function Home() {
                           fill="hsl(var(--card-foreground))"
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={window.innerWidth < 640 ? 10 : 12}
+                          fontSize={window.innerWidth < 640 ? 10 : 12} // Adjusted for responsiveness
                           fontWeight="bold"
                           className="opacity-90 pointer-events-none"
                         >
@@ -495,7 +504,7 @@ export default function Home() {
                           fill="hsl(var(--foreground))"
                           textAnchor={xName > cx ? "start" : "end"}
                           dominantBaseline="central"
-                          fontSize={window.innerWidth < 640 ? 10 : 14}
+                          fontSize={window.innerWidth < 640 ? 10 : 14} // Adjusted for responsiveness
                           className="font-medium pointer-events-none"
                         >
                           {name}
@@ -526,11 +535,11 @@ export default function Home() {
                   verticalAlign="bottom"
                   align="center"
                   wrapperStyle={{
-                    fontSize: window.innerWidth < 640 ? '10px' : '12px',
-                    paddingTop: '15px',
+                    fontSize: window.innerWidth < 640 ? '10px' : '12px', // Adjusted for responsiveness
+                    paddingTop: '15px', // Ensure enough space for legend
                     color: "hsl(var(--foreground))",
                   }}
-                  iconSize={window.innerWidth < 640 ? 8 : 10}
+                  iconSize={window.innerWidth < 640 ? 8 : 10} // Adjusted for responsiveness
                   formatter={(value) => (
                     <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
                   )}
@@ -573,5 +582,3 @@ export default function Home() {
     </div>
   );
 }
-
-      
