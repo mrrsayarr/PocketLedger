@@ -152,11 +152,11 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [category, setCategory] = useState(categories[0]);
-  const [amount, setAmount] = useState<number | undefined>(0);
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
+  const [darkMode, setDarkMode] = useState(true); 
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -190,21 +190,19 @@ export default function Home() {
   }, [loadTransactions, loadDashboardData]);
   
   useEffect(() => {
-    // Sync darkMode state with localStorage and HTML class
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === "false" ? false : true;
-      setDarkMode(initialDarkMode); // Set state from localStorage
+      const initialDarkMode = storedDarkMode === "false" ? false : true; 
+      setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
       } else {
         document.documentElement.classList.remove("dark");
       }
     }
-  }, []); // Runs once on mount
+  }, []);
 
   useEffect(() => {
-    // Persist darkMode changes to localStorage and update HTML class
     if (typeof window !== 'undefined') {
       localStorage.setItem("darkMode", darkMode.toString());
       if (darkMode) {
@@ -213,28 +211,32 @@ export default function Home() {
         document.documentElement.classList.remove("dark");
       }
     }
-  }, [darkMode]); // Runs when darkMode state changes
+  }, [darkMode]);
 
   useEffect(() => {
-    // Initialize displayCurrency and load data
     const initializeAppData = async () => {
       if (typeof window !== 'undefined') {
         const storedDisplayCurrency = localStorage.getItem("displayCurrency");
         const initialDisplayCurrency = storedDisplayCurrency || "TRY";
         setDisplayCurrency(initialDisplayCurrency);
-        await loadInitialData(initialDisplayCurrency);
       }
     };
     initializeAppData();
-  }, [loadInitialData]); 
+  }, []); 
   
   useEffect(() => {
-    // Persist displayCurrency and reload dashboard data when it changes
     if (displayCurrency && typeof window !== 'undefined') {
         localStorage.setItem("displayCurrency", displayCurrency);
-        loadDashboardData(displayCurrency);
+        loadInitialData(displayCurrency).catch(error => {
+            console.error("Failed to load initial data:", error);
+            toast({
+                title: "Error Loading Data",
+                description: "Could not load initial financial data. Please refresh.",
+                variant: "destructive",
+            });
+        });
     }
-  }, [displayCurrency, loadDashboardData]);
+  }, [displayCurrency, loadInitialData, toast]);
 
 
   const addTransaction = async () => {
@@ -254,7 +256,7 @@ export default function Home() {
       });
       return;
     }
-
+    let dbOpSuccessful = false;
     try {
       await addTransactionToDb(
         date.toISOString(),
@@ -264,9 +266,11 @@ export default function Home() {
         transactionCurrency,
         notes
       );
+      dbOpSuccessful = true;
+
       setDate(new Date());
       setCategory(categories[0]);
-      setAmount(0);
+      setAmount(undefined); 
       setNotes("");
       setType("expense");
       setTransactionCurrency("TRY"); 
@@ -276,14 +280,21 @@ export default function Home() {
       });
       await loadTransactions(); 
       await loadDashboardData(displayCurrency); 
-    } catch (error) { {
-        console.error("Failed to add transaction:", error);
-        toast({
-          title: "Database Error",
-          description: "Could not save the transaction. Please try again.",
-          variant: "destructive",
-        });
-      }
+    } catch (error) { 
+        console.error("Error during transaction operation:", error);
+        if (dbOpSuccessful) {
+            toast({
+              title: "Data Reload Error",
+              description: "Transaction saved, but failed to reload data. Please refresh.",
+              variant: "destructive",
+            });
+        } else {
+            toast({
+              title: "Database Error",
+              description: "Could not save the transaction. Please try again.",
+              variant: "destructive",
+            });
+        }
     }
   };
 
@@ -453,7 +464,7 @@ export default function Home() {
                   <Input
                     type="number"
                     id="amount-input"
-                    value={amount === undefined || amount === 0 ? "" : amount.toString()}
+                    value={amount === undefined ? "" : amount.toString()}
                     onChange={(e) => setAmount(e.target.value === "" ? undefined : Number(e.target.value))}
                     className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
                     placeholder="e.g. 100.50"
@@ -730,6 +741,5 @@ export default function Home() {
     </div>
   );
 }
-
 
     

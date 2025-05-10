@@ -1,4 +1,3 @@
-
 'use server';
 
 import { open } from 'sqlite';
@@ -57,11 +56,11 @@ export const deleteTransactionFromDb = async (id: number) => {
 export const getAllTransactionsFromDb = async () => {
   const db = await initializeDatabase();
   // Explicitly type the transactions to avoid 'any'
-  const transactions: Array<{ id: number; date: string; category: string; amount: number; type: 'income' | 'expense'; currency: string; notes?: string }> = await db.all(
+  const transactionsFromDb: Array<{ id: number; date: string; category: string; amount: number; type: 'income' | 'expense'; currency: string; notes?: string }> = await db.all(
     'SELECT * FROM transactions ORDER BY date DESC'
   );
   await db.close();
-  return transactions.map(transaction => ({
+  return transactionsFromDb.map(transaction => ({ // Fixed typo: was transactions.map
     ...transaction,
     date: new Date(transaction.date), // Convert ISO string date back to Date object
   }));
