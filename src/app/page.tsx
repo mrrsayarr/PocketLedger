@@ -167,6 +167,7 @@ export default function Home() {
           document.documentElement.classList.remove("dark");
         }
       } else {
+        // Default to dark mode if no preference is stored
         setDarkMode(true);
         document.documentElement.classList.add("dark");
         localStorage.setItem("darkMode", "true");
@@ -250,20 +251,15 @@ export default function Home() {
     const pressedKeys = new Set<string>();
 
     const handleKeyDown = (event: KeyboardEvent) => {
-        // Add non-modifier keys to the set
         if (event.key.toLowerCase() !== 'control' && event.key.toLowerCase() !== 'shift' && event.key.toLowerCase() !== 'alt' && event.key.toLowerCase() !== 'meta') {
             pressedKeys.add(event.key.toLowerCase());
         }
 
-        // Check for Shift + S + D
         if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
-            // Ensure this event is for 's' or 'd' to finalize the combo while Shift is held.
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
-                event.preventDefault(); // Prevent default browser actions
-                // console.log('Shift+S+D shortcut triggered for Reset All Data');
-                handleResetData(); // Call directly without confirmation
+                event.preventDefault(); 
+                handleResetData(); 
                 
-                // Clear 's' and 'd' from the set to require them to be re-pressed for another trigger.
                 pressedKeys.delete('s');
                 pressedKeys.delete('d');
             }
@@ -628,6 +624,9 @@ export default function Home() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <p className="mt-2 text-xs text-muted-foreground/80">
+          (Tip: Press Shift + S + D to reset data without confirmation)
+        </p>
         <p className="mt-4">
           © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
         </p>
