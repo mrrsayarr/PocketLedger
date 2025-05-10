@@ -31,6 +31,7 @@ const initializeDatabase = async (): Promise<SQLiteDatabase> => {
     console.warn('Failed to enable WAL mode. This might impact concurrency but is not critical for basic operations.', walError);
   }
 
+  // Ensure 'transactions' table is created with the 'currency' column
   await db.exec(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,30 +39,28 @@ const initializeDatabase = async (): Promise<SQLiteDatabase> => {
       category TEXT NOT NULL,
       amount REAL NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-      -- currency TEXT NOT NULL DEFAULT 'TRY', -- Base definition, will be ensured by migration logic below
+      currency TEXT NOT NULL DEFAULT 'TRY', -- Added currency column directly
       notes TEXT
     )
   `);
-  console.log("'transactions' table ensured (created if not exists).");
+  console.log("'transactions' table ensured (created with currency column if not exists).");
 
-  // Check and add 'currency' column to 'transactions' if it doesn't exist
+  // Fallback: Check and add 'currency' column to 'transactions' if it somehow still doesn't exist
+  // This is mainly for databases created by a version of the code that did not include 'currency' in the initial CREATE.
   try {
     const tableInfo = await db.all(`PRAGMA table_info(transactions);`);
-    // Cast tableInfo to an array of objects with a 'name' property
     const columns = tableInfo as Array<{ name: string; [key: string]: any }>;
     const currencyColumnExists = columns.some(column => column.name === 'currency');
     
     if (!currencyColumnExists) {
-      console.log("'transactions' table exists but 'currency' column is missing. Attempting to add it.");
+      console.log("'transactions' table exists but 'currency' column is missing. Attempting to add it via ALTER TABLE.");
       await db.exec(`ALTER TABLE transactions ADD COLUMN currency TEXT NOT NULL DEFAULT 'TRY';`);
-      console.log("'currency' column added to 'transactions' table successfully.");
+      console.log("'currency' column added to 'transactions' table successfully via ALTER TABLE.");
     } else {
-      console.log("'currency' column already exists in 'transactions' table.");
+      console.log("'currency' column already exists in 'transactions' table or was just created.");
     }
   } catch (e: any) {
-    // This might happen if the table 'transactions' itself doesn't exist yet (which CREATE TABLE handles),
-    // or other PRAGMA/ALTER errors.
-    console.warn("Could not check/add 'currency' column to 'transactions', this might be normal if table is new or error during alter:", e.message);
+    console.warn("Could not check/add 'currency' column to 'transactions' via ALTER TABLE. This might be an issue if the table schema is outdated and the initial CREATE failed to include it.", e.message);
   }
 
 
@@ -101,8 +100,6 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
       }
     }
     if (!dbInstance) {
-      // This state should ideally not be reached if the above logic is correct,
-      // but it's a safeguard.
       console.error("PROD: dbInstance is null after initialization attempt. This indicates a persistent issue.");
       throw new Error("Database instance is not available in production after initialization attempt.");
     }
@@ -137,9 +134,6 @@ export const addTransactionToDb = async (date: string, category: string, amount:
     
     if (result.lastID === undefined || (typeof result.changes === 'number' && result.changes === 0)) {
         console.error('Transaction insert operation made no changes or lastID is undefined. This might indicate an issue.', result);
-        // It's possible for lastID to be undefined and changes to be 1 if PK is not autoincrement or other specific cases.
-        // However, for this schema, lastID should be populated on successful insert.
-        // The primary concern is if changes is 0.
         if (typeof result.changes === 'number' && result.changes === 0) {
           throw new Error('Insert operation reported 0 rows affected. Transaction may not have been saved.');
         }
@@ -167,7 +161,7 @@ export const getAllTransactionsFromDb = async () => {
   const db = await getDbInstance();
   console.log('Fetching all transactions from DB.');
   const transactionsFromDb: Array<{ id: number; date: string; category: string; amount: number; type: 'income' | 'expense'; currency: string; notes?: string }> = await db.all(
-    'SELECT * FROM transactions ORDER BY date DESC, id DESC' // Added id DESC for consistent ordering of same-day transactions
+    'SELECT * FROM transactions ORDER BY date DESC, id DESC'
   );
   console.log(`Fetched ${transactionsFromDb.length} transactions.`);
   return transactionsFromDb.map(transaction => ({
@@ -224,8 +218,6 @@ export const resetAllDataInDb = async () => {
   const db = await getDbInstance();
   console.log('Attempting to reset all data in DB (transactions and users tables).');
   
-  // More robust reset: drop tables and recreate them to ensure schema is fresh
-  // This is more aggressive but helps avoid schema mismatch issues during development.
   try {
     console.log("Dropping 'transactions' table if it exists...");
     await db.exec('DROP TABLE IF EXISTS transactions;');
@@ -235,14 +227,16 @@ export const resetAllDataInDb = async () => {
     await db.exec('DROP TABLE IF EXISTS users;');
     console.log("'users' table dropped.");
 
-    // Re-initialize tables with the current schema definitions
-    // This will call the CREATE TABLE statements again
-    console.log("Re-initializing database tables...");
-    // We can call initializeDatabase, but it might lead to recursion or issues with global promise.
-    // Simpler to just re-run the CREATE TABLE commands here or parts of initializeDatabase.
-    // For now, relying on the next getDbInstance() call to re-initialize.
-    // A more explicit re-creation might be:
-    await db.exec(`
+    console.log("Re-initializing database tables via initializeDatabase logic...");
+    // Instead of duplicating CREATE TABLE statements, we can try to force re-initialization.
+    // However, getDbInstance manages a singleton promise/instance.
+    // The most straightforward way here is to re-run the CREATE statements
+    // as they are defined in initializeDatabase or just call initializeDatabase again
+    // if it can be made idempotent for table creation.
+    // For simplicity and directness, we'll re-issue the CREATEs as defined.
+    // Or better, make initializeDatabase handle this re-creation if db is passed.
+    // For now, re-issuing the CREATE as per the current good schema:
+     await db.exec(`
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT NOT NULL,
@@ -264,17 +258,11 @@ export const resetAllDataInDb = async () => {
 
   } catch (error: any) {
     console.error("Error during table drop/recreate in resetAllDataInDb:", error);
-    // If drop/recreate fails, fall back to deleting data
-    console.log("Fallback: Deleting data from tables instead of dropping.");
+    console.log("Fallback: Deleting data from tables instead of dropping. This might not fix schema issues.");
     await db.run('DELETE FROM transactions').catch(e => console.error("Failed to delete from transactions during fallback:", e));
     await db.run('DELETE FROM users').catch(e => console.error("Failed to delete from users during fallback:", e));
   }
   
-  // Optional: Resetting sequence for autoincrement IDs if desired (SQLite specific)
-  // Only do this if tables were not dropped and recreated.
-  // await db.run("DELETE FROM sqlite_sequence WHERE name='transactions';").catch(e => {});
-  // await db.run("DELETE FROM sqlite_sequence WHERE name='users';").catch(e => {});
-  // console.log("Autoincrement sequences reset (if applicable).");
   console.log('All data reset in DB completed.');
 };
 
@@ -312,3 +300,4 @@ export const checkPassword = async (passwordToCheck: string): Promise<boolean> =
   console.log('No password found for user ID 1 or user does not exist.');
   return false; 
 };
+
