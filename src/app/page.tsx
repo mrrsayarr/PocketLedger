@@ -1,6 +1,9 @@
+
 "use client";
 
-import { useState, useEffect } from "react";
+import type { Metadata, Viewport } from 'next';
+import { useState, useEffect, FormEvent } from "react";
+import Link from 'next/link';
 import {
   Card,
   CardContent,
@@ -40,10 +43,23 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
+  resetAllDataInDb,
 } from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
 import { Icons } from "@/components/icons";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 // Define type for a transaction
 type Transaction = {
@@ -117,18 +133,22 @@ export default function Home() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
-
+  
   useEffect(() => {
-    const storedDarkMode = localStorage.getItem("darkMode");
-    if (storedDarkMode !== null) {
-      setDarkMode(storedDarkMode === "true");
-    } else {
-      setDarkMode(true);
-      localStorage.setItem("darkMode", "true");
-    }
-    loadInitialData();
+    const initializeApp = async () => {
+      const storedDarkMode = localStorage.getItem("darkMode");
+      if (storedDarkMode !== null) {
+        setDarkMode(storedDarkMode === "true");
+      } else {
+        // Default to dark mode if nothing is stored
+        setDarkMode(true); 
+        localStorage.setItem("darkMode", "true");
+      }
+      await loadInitialData();
+    };
+    initializeApp();
   }, []);
-
+  
   useEffect(() => {
     localStorage.setItem("darkMode", darkMode.toString());
     if (darkMode) {
@@ -213,22 +233,42 @@ export default function Home() {
     setDarkMode((prevMode) => !prevMode);
   };
 
+  const handleResetData = async () => {
+    await resetAllDataInDb();
+    toast({
+      title: "Success!",
+      description: "All your data has been reset.",
+    });
+    await loadInitialData();
+  };
+
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
       <Toaster />
       <header className="flex justify-between items-center mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-primary">PocketLedger</h1>
-        <div className="flex items-center space-x-2">
-          <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground">
-            {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
-          </Label>
-          <Switch
-            id="dark-mode"
-            checked={darkMode}
-            onCheckedChange={toggleDarkMode}
-            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted shadow-inner rounded-full"
-            aria-label="Toggle dark mode"
-          />
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
+          <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
+          PocketLedger Pro
+        </h1>
+        <div className="flex items-center space-x-4">
+          <Link href="/notes" legacyBehavior>
+            <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all">
+              <Icons.notebook className="mr-2 h-5 w-5" />
+              My Notes
+            </Button>
+          </Link>
+          <div className="flex items-center space-x-2">
+            <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground">
+              {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
+            </Label>
+            <Switch
+              id="dark-mode"
+              checked={darkMode}
+              onCheckedChange={toggleDarkMode}
+              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted shadow-inner rounded-full"
+              aria-label="Toggle dark mode"
+            />
+          </div>
         </div>
       </header>
 
@@ -425,24 +465,22 @@ export default function Home() {
                   labelLine={false}
                   label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
                     const RADIAN = Math.PI / 180;
-                    // Position for the percentage text inside the slice
-                    const radiusPercent = innerRadius + (outerRadius - innerRadius) * 0.45; // Adjusted for better centering
+                    const radiusPercent = innerRadius + (outerRadius - innerRadius) * 0.45;
                     const xPercent = cx + radiusPercent * Math.cos(-midAngle * RADIAN);
                     const yPercent = cy + radiusPercent * Math.sin(-midAngle * RADIAN);
                 
-                    // Position for the name label outside the slice
-                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30); // Increased offset for names
+                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30);
                     const xName = cx + radiusName * Math.cos(-midAngle * RADIAN);
                     const yName = cy + radiusName * Math.sin(-midAngle * RADIAN);
                 
-                    if (percent * 100 < 2) return null; // Don't render label for very small slices
+                    if (percent * 100 < 2) return null; 
                 
                     return (
                       <>
                         <text
                           x={xPercent}
                           y={yPercent}
-                          fill="hsl(var(--card-foreground))" // Use card foreground for better contrast on colored slices
+                          fill="hsl(var(--card-foreground))"
                           textAnchor="middle"
                           dominantBaseline="central"
                           fontSize={window.innerWidth < 640 ? 10 : 12}
@@ -465,11 +503,11 @@ export default function Home() {
                       </>
                     );
                   }}
-                  outerRadius="70%" // Slightly reduced to make space for outer labels
-                  fill="#8884d8" // Default fill, will be overridden by Cell
+                  outerRadius="70%"
+                  fill="#8884d8"
                   dataKey="value"
                   nameKey="name"
-                  stroke="hsl(var(--background))" // Stroke to separate slices
+                  stroke="hsl(var(--background))"
                   strokeWidth={2}
                 >
                   {spendingData.map((entry, index) => (
@@ -489,11 +527,11 @@ export default function Home() {
                   align="center"
                   wrapperStyle={{
                     fontSize: window.innerWidth < 640 ? '10px' : '12px',
-                    paddingTop: '15px', // Space above legend
-                    color: "hsl(var(--foreground))", // Ensure legend text color matches theme
+                    paddingTop: '15px',
+                    color: "hsl(var(--foreground))",
                   }}
                   iconSize={window.innerWidth < 640 ? 8 : 10}
-                  formatter={(value) => ( // Ensure legend item text color matches theme
+                  formatter={(value) => (
                     <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
                   )}
                 />
@@ -502,6 +540,38 @@ export default function Home() {
           </CardContent>
         </Card>
       )}
+       <footer className="mt-auto pt-8 pb-4 text-center text-muted-foreground text-sm">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
+              <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
+              <AlertDialogDescription className="text-muted-foreground">
+                This action cannot be undone. This will permanently delete all
+                your transaction data from the application.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleResetData}
+                className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              >
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <p className="mt-4">
+          © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
+        </p>
+      </footer>
     </div>
   );
 }
+
+      

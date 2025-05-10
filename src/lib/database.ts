@@ -1,41 +1,36 @@
+
 'use server';
 
 import { open } from 'sqlite';
 import sqlite3 from 'sqlite3';
 
+// Database file path (project root)
+const DB_FILE_PATH = './pocketledger.db';
+
+// Initialize the database connection and create tables if they don't exist
 const initializeDatabase = async () => {
   const db = await open({
-    filename: './pocketledger.db', // Store in the project root
+    filename: DB_FILE_PATH,
     driver: sqlite3.Database,
   });
 
+  // Create transactions table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      date TEXT NOT NULL,
+      date TEXT NOT NULL,          -- ISO string format for dates
       category TEXT NOT NULL,
-      amount REAL NOT NULL,
-      type TEXT NOT NULL,
-      notes TEXT
+      amount REAL NOT NULL,        -- Using REAL for monetary values
+      type TEXT NOT NULL CHECK(type IN ('income', 'expense')), -- Ensures type is either 'income' or 'expense'
+      notes TEXT                   -- Optional notes for the transaction
     )
   `);
-
-  await db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    password TEXT NOT NULL
-  )
-`);
-
-  // Ensure there is always one user record to simplify password management.
-  const userCount = await db.get('SELECT COUNT(*) as count FROM users');
-  if (userCount && (userCount as any).count === 0) {
-    await db.run('INSERT INTO users (password) VALUES (?)', ''); // Initial empty password
-  }
+  
   return db;
 };
 
-export const addTransactionToDb = async (date: string, category: string, amount: number, type: string, notes?: string) => {
+// Add a new transaction to the database
+export const addTransactionToDb = async (date: string, category: string, amount: number, type: 'income' | 'expense', notes?: string) => {
   const db = await initializeDatabase();
   await db.run(
     'INSERT INTO transactions (date, category, amount, type, notes) VALUES (?, ?, ?, ?, ?)',
@@ -48,77 +43,77 @@ export const addTransactionToDb = async (date: string, category: string, amount:
   await db.close();
 };
 
-export const editTransactionInDb = async (id: number, date: string, category: string, amount: number, type: string, notes?: string) => {
-  const db = await initializeDatabase();
-  await db.run(
-    'UPDATE transactions SET date = ?, category = ?, amount = ?, type = ?, notes = ? WHERE id = ?',
-    date,
-    category,
-    amount,
-    type,
-    notes,
-    id
-  );
-  await db.close();
-};
 
+// Delete a transaction from the database by its ID
 export const deleteTransactionFromDb = async (id: number) => {
   const db = await initializeDatabase();
   await db.run('DELETE FROM transactions WHERE id = ?', id);
   await db.close();
 };
 
+// Retrieve all transactions from the database, ordered by date descending
 export const getAllTransactionsFromDb = async () => {
   const db = await initializeDatabase();
-  const transactions = await db.all('SELECT * FROM transactions ORDER BY date DESC');
+  // Explicitly type the transactions to avoid 'any'
+  const transactions: Array<{ id: number; date: string; category: string; amount: number; type: 'income' | 'expense'; notes?: string }> = await db.all(
+    'SELECT * FROM transactions ORDER BY date DESC'
+  );
   await db.close();
-  return transactions.map((transaction: any) => ({
+  return transactions.map(transaction => ({
     ...transaction,
-    date: new Date(transaction.date), // Convert back to Date object
+    date: new Date(transaction.date), // Convert ISO string date back to Date object
   }));
 };
 
+// Calculate and return the total balance (income - expenses)
 export const getTotalBalanceFromDb = async (): Promise<number> => {
   const db = await initializeDatabase();
-  const result = await db.get(
+  const result = await db.get<{ totalBalance: number }>(
     `SELECT SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END) AS totalBalance FROM transactions`
   );
   await db.close();
   return Number(result?.totalBalance || 0);
 };
 
+// Calculate and return the total income
 export const getTotalIncomeFromDb = async (): Promise<number> => {
   const db = await initializeDatabase();
-  const result = await db.get(`SELECT SUM(amount) AS totalIncome FROM transactions WHERE type = 'income'`);
+  const result = await db.get<{ totalIncome: number }>(
+    `SELECT SUM(amount) AS totalIncome FROM transactions WHERE type = 'income'`
+  );
   await db.close();
   return Number(result?.totalIncome || 0);
 };
 
+// Calculate and return the total expenses
 export const getTotalExpenseFromDb = async (): Promise<number> => {
   const db = await initializeDatabase();
-  const result = await db.get(`SELECT SUM(amount) AS totalExpense FROM transactions WHERE type = 'expense'`);
+  const result = await db.get<{ totalExpense: number }>(
+    `SELECT SUM(amount) AS totalExpense FROM transactions WHERE type = 'expense'`
+  );
   await db.close();
   return Number(result?.totalExpense || 0);
 };
 
+// Retrieve spending data grouped by category for expenses
 export const getSpendingByCategoryFromDb = async (): Promise<{ category: string; total: number }[]> => {
   const db = await initializeDatabase();
-  const result = await db.all(
-    `SELECT category, SUM(amount) AS total FROM transactions WHERE type = 'expense' GROUP BY category`
+  // Explicitly type the result items
+  const result: Array<{ category: string; total: number }> = await db.all(
+    `SELECT category, SUM(amount) AS total FROM transactions WHERE type = 'expense' GROUP BY category ORDER BY total DESC`
   );
   await db.close();
-  return result.map((item: any) => ({ category: item.category, total: Number(item.total) }));
+  return result.map(item => ({ category: item.category, total: Number(item.total) }));
 };
 
-export const getUserPasswordFromDb = async (): Promise<string | null> => {
+// Reset all transaction data from the database
+export const resetAllDataInDb = async () => {
   const db = await initializeDatabase();
-  const user = await db.get('SELECT password FROM users WHERE id = 1'); // Assuming single user with ID 1
+  await db.run('DELETE FROM transactions');
+  // Optionally, you might want to reset AUTOINCREMENT sequence for the table if needed,
+  // though for this app, it might not be strictly necessary.
+  // await db.run("DELETE FROM sqlite_sequence WHERE name='transactions';");
   await db.close();
-  return user ? (user as any).password : null;
 };
 
-export const setUserPasswordInDb = async (password: string) => {
-  const db = await initializeDatabase();
-  await db.run('UPDATE users SET password = ? WHERE id = 1', password); // Assuming single user with ID 1
-  await db.close();
-};
+      
