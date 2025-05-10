@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -163,7 +164,6 @@ export default function Home() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
-  const [transactionCurrency, setTransactionCurrency] = useState<string>("TRY");
   const [displayCurrency, setDisplayCurrency] = useState<string>("TRY");
 
   const loadTransactions = useCallback(async () => {
@@ -192,7 +192,6 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      // Default to dark mode if nothing is stored or if it's explicitly 'true'
       const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
@@ -230,7 +229,7 @@ export default function Home() {
     if (displayCurrency && typeof window !== 'undefined') {
         localStorage.setItem("displayCurrency", displayCurrency);
         loadInitialData(displayCurrency).catch(error => {
-            console.error("Failed to load initial data:", error);
+            console.error("Error Loading Data:", error);
             toast({
                 title: "Error Loading Data",
                 description: "Could not load initial financial data. Please refresh.",
@@ -265,7 +264,7 @@ export default function Home() {
         category,
         amount,
         type,
-        transactionCurrency,
+        displayCurrency, // Use displayCurrency for new transactions
         notes
       );
       dbOpSuccessful = true;
@@ -275,7 +274,6 @@ export default function Home() {
       setAmount(undefined); 
       setNotes("");
       setType("expense");
-      setTransactionCurrency("TRY"); 
       toast({
         title: "Success",
         description: "Transaction added successfully.",
@@ -460,7 +458,7 @@ export default function Home() {
                   ))}
                 </select>
               </div>
-               <div className="grid grid-cols-2 gap-4">
+               <div className="grid grid-cols-1 gap-4"> {/* Changed to 1 column as currency select is removed */}
                 <div>
                   <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
                   <Input
@@ -472,21 +470,6 @@ export default function Home() {
                     placeholder="e.g. 100.50"
                     aria-label="Enter transaction amount"
                   />
-                </div>
-                <div>
-                    <Label htmlFor="transaction-currency-select" className="mb-1 font-medium text-card-foreground">Currency</Label>
-                    <Select value={transactionCurrency} onValueChange={setTransactionCurrency}>
-                        <SelectTrigger className="w-full rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10">
-                        <SelectValue placeholder="Currency" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-lg">
-                        {supportedCurrencies.map((currency) => (
-                            <SelectItem key={currency.code} value={currency.code} className="text-sm">
-                            {currency.code} ({currency.symbol})
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
                 </div>
               </div>
               <div>
@@ -745,3 +728,4 @@ export default function Home() {
 }
 
     
+
