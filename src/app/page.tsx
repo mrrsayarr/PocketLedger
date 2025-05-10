@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -111,12 +112,13 @@ const CustomTooltip = ({ active, payload }: any) => {
       if (percentScaled === 0) {
         displayPercentText = "0.00";
       } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00") {
-        displayPercentText = percentScaled.toFixed(4);
+        // For very small percentages that round to 0.00, show more precision
+        displayPercentText = percentScaled.toFixed(4); 
       } else {
         displayPercentText = percentScaled.toFixed(2);
       }
     } else {
-      displayPercentText = '0.00'; 
+      displayPercentText = '0.00'; // Fallback if percent is not a valid number
     }
     
     const displayCurrencySymbol = "₺";
@@ -303,10 +305,13 @@ export default function Home() {
             pressedKeys.add(event.key.toLowerCase());
         }
 
+        // Check for Shift + S + D
         if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
+             // Ensure the last key pressed is S or D to complete the combo
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
                 event.preventDefault(); 
                 handleResetData(); 
+                // Clear the pressed keys after action
                 pressedKeys.delete('s');
                 pressedKeys.delete('d');
             }
@@ -328,7 +333,7 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow only numbers
+    // Allow only numbers (integers)
     if (/^\d*$/.test(value)) {
       setAmount(value);
     }
@@ -344,7 +349,7 @@ export default function Home() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/80 backdrop-blur-sm">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
         <Toaster />
         <header className="flex justify-between items-center mb-6 sm:mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
@@ -437,7 +442,7 @@ export default function Home() {
                 <div>
                   <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
                   <Input
-                    type="text"
+                    type="text" 
                     id="amount-input"
                     value={amount}
                     onChange={handleAmountChange}
@@ -445,7 +450,7 @@ export default function Home() {
                     className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
                     placeholder="e.g. 100"
                     aria-label="Enter transaction amount"
-                    inputMode="numeric"
+                    inputMode="numeric" 
                     pattern="[0-9]*"
                   />
                 </div>
@@ -622,8 +627,10 @@ export default function Home() {
 
                       const displayPercentVal = (typeof percent === 'number' && !isNaN(percent)) ? (percent * 100).toFixed(0) : '0';
 
+                      // Do not render label if value is 0 or percent is too small (for many categories)
                       if (typeof value === 'number' && value === 0) return null; 
                       if (spendingData.length > 5 && parseFloat(displayPercentVal) < 2) return null;
+
 
                       return (
                         <>
@@ -665,7 +672,7 @@ export default function Home() {
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
                         className="focus:outline-none transition-opacity duration-200 hover:opacity-70 cursor-pointer"
-                        tabIndex={0}
+                        tabIndex={0} // Make cells focusable for accessibility/keyboard nav
                         aria-label={`${entry.name}: ${displayCurrencySymbol}${entry.value.toFixed(2)}`}
                       />
                     ))}
@@ -676,12 +683,12 @@ export default function Home() {
                     verticalAlign="bottom"
                     align="center"
                     wrapperStyle={{
-                      fontSize: window.innerWidth < 640 ? '10px' : '12px',
-                      paddingTop: '15px',
-                      color: "hsl(var(--foreground))",
+                      fontSize: window.innerWidth < 640 ? '10px' : '12px', // Responsive font size
+                      paddingTop: '15px', // Space above legend
+                      color: "hsl(var(--foreground))", // Ensure legend text color matches theme
                     }}
-                    iconSize={window.innerWidth < 640 ? 8 : 10}
-                    formatter={(value) => (
+                    iconSize={window.innerWidth < 640 ? 8 : 10} // Responsive icon size
+                    formatter={(value) => ( // Ensure legend item text uses foreground color
                       <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
                     )}
                   />
@@ -692,6 +699,11 @@ export default function Home() {
         )}
         <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
           <div className="container mx-auto flex flex-col items-center space-y-4">
+             <Link href="/about" passHref>
+                <Button variant="link" className="text-primary hover:underline">
+                  About PocketLedger Pro
+                </Button>
+              </Link>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
@@ -729,3 +741,4 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
