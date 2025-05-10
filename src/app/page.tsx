@@ -156,15 +156,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(() => {
-    if (typeof window !== "undefined") {
-      const storedDarkMode = localStorage.getItem("darkMode");
-      // If 'false', set to false (light). Otherwise (null or 'true'), set to true (dark).
-      return storedDarkMode === "false" ? false : true;
-    }
-    // Default for SSR or if window is not yet available
-    return true; // Default to dark
-  });
+  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -190,7 +182,7 @@ export default function Home() {
     setSpendingData(
       spending.map((item) => ({ name: item.category, value: item.total }))
     );
-  }, []); // Removed state setters from deps as they are stable
+  }, []); 
 
   const loadInitialData = useCallback(async (currentDisplayCurrency: string) => {
     await loadTransactions();
@@ -198,8 +190,21 @@ export default function Home() {
   }, [loadTransactions, loadDashboardData]);
   
   useEffect(() => {
-    // This effect synchronizes the darkMode state with localStorage and the HTML class
-    // It runs whenever `darkMode` state changes, or on initial mount after first render.
+    // Sync darkMode state with localStorage and HTML class
+    if (typeof window !== 'undefined') {
+      const storedDarkMode = localStorage.getItem("darkMode");
+      const initialDarkMode = storedDarkMode === "false" ? false : true;
+      setDarkMode(initialDarkMode); // Set state from localStorage
+      if (initialDarkMode) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+    }
+  }, []); // Runs once on mount
+
+  useEffect(() => {
+    // Persist darkMode changes to localStorage and update HTML class
     if (typeof window !== 'undefined') {
       localStorage.setItem("darkMode", darkMode.toString());
       if (darkMode) {
@@ -208,15 +213,17 @@ export default function Home() {
         document.documentElement.classList.remove("dark");
       }
     }
-  }, [darkMode]);
+  }, [darkMode]); // Runs when darkMode state changes
 
   useEffect(() => {
     // Initialize displayCurrency and load data
     const initializeAppData = async () => {
-      const storedDisplayCurrency = localStorage.getItem("displayCurrency");
-      const initialDisplayCurrency = storedDisplayCurrency || "TRY";
-      setDisplayCurrency(initialDisplayCurrency);
-      await loadInitialData(initialDisplayCurrency);
+      if (typeof window !== 'undefined') {
+        const storedDisplayCurrency = localStorage.getItem("displayCurrency");
+        const initialDisplayCurrency = storedDisplayCurrency || "TRY";
+        setDisplayCurrency(initialDisplayCurrency);
+        await loadInitialData(initialDisplayCurrency);
+      }
     };
     initializeAppData();
   }, [loadInitialData]); 
@@ -248,26 +255,36 @@ export default function Home() {
       return;
     }
 
-    await addTransactionToDb(
-      date.toISOString(),
-      category,
-      amount,
-      type,
-      transactionCurrency,
-      notes
-    );
-    setDate(new Date());
-    setCategory(categories[0]);
-    setAmount(0);
-    setNotes("");
-    setType("expense");
-    setTransactionCurrency("TRY"); // Reset form currency to default
-    toast({
-      title: "Success",
-      description: "Transaction added successfully.",
-    });
-    await loadTransactions(); 
-    await loadDashboardData(displayCurrency); 
+    try {
+      await addTransactionToDb(
+        date.toISOString(),
+        category,
+        amount,
+        type,
+        transactionCurrency,
+        notes
+      );
+      setDate(new Date());
+      setCategory(categories[0]);
+      setAmount(0);
+      setNotes("");
+      setType("expense");
+      setTransactionCurrency("TRY"); 
+      toast({
+        title: "Success",
+        description: "Transaction added successfully.",
+      });
+      await loadTransactions(); 
+      await loadDashboardData(displayCurrency); 
+    } catch (error) { {
+        console.error("Failed to add transaction:", error);
+        toast({
+          title: "Database Error",
+          description: "Could not save the transaction. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const deleteTransaction = async (id: number) => {
@@ -713,3 +730,6 @@ export default function Home() {
     </div>
   );
 }
+
+
+    
