@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -146,7 +147,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(true); 
+  const [darkMode, setDarkMode] = useState(false); 
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -181,7 +182,7 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
+      const initialDarkMode = storedDarkMode === "true"; // Default to false (light)
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -754,3 +755,4 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+

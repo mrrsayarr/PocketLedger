@@ -57,10 +57,11 @@ export default function NotesPage() {
   useEffect(() => {
     // Theme synchronization
     const storedDarkMode = localStorage.getItem('darkMode');
-    if (storedDarkMode === 'false') {
-      document.documentElement.classList.remove('dark');
-    } else {
+    if (storedDarkMode === 'true') { // Add dark class only if explicitly 'true'
       document.documentElement.classList.add('dark');
+    } else { 
+      // Default to light (remove dark class if present) or if value is 'false' or null
+      document.documentElement.classList.remove('dark');
     }
 
     // Existing notes loading logic
@@ -312,3 +313,4 @@ export default function NotesPage() {
     </div>
   );
 }
+

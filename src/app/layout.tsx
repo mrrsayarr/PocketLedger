@@ -48,15 +48,15 @@ export default function RootLayout({
               (function() {
                 try {
                   const storedDarkMode = localStorage.getItem('darkMode');
-                  if (storedDarkMode === 'false') {
-                    document.documentElement.classList.remove('dark');
-                  } else { 
-                    // Default to dark or if value is 'true' or null
+                  if (storedDarkMode === 'true') {
                     document.documentElement.classList.add('dark');
+                  } else { 
+                    // Default to light (remove dark class if present) or if value is 'false' or null
+                    document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {
-                  // Fallback if localStorage is not available or other error
-                  document.documentElement.classList.add('dark');
+                  // Fallback if localStorage is not available or other error, default to light
+                  document.documentElement.classList.remove('dark');
                 }
               })();
             `,
@@ -69,3 +69,4 @@ export default function RootLayout({
     </html>
   );
 }
+
