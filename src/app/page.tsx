@@ -100,18 +100,30 @@ const CustomTooltip = ({ active, payload }: any) => {
     const value = data.value;
     const percent = payload[0].percent;
 
-    const displayPercent = (typeof percent === 'number' && !isNaN(percent)) 
-      ? (percent * 100).toFixed(2) 
-      : '0.00';
+    let displayPercentText;
+    if (typeof percent === 'number' && !isNaN(percent)) {
+      const percentScaled = percent * 100;
+      if (percentScaled === 0) {
+        displayPercentText = "0.00";
+      } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00") {
+        // If it's positive but rounds to "0.00" with two decimal places,
+        // use four decimal places to show it's not exactly zero.
+        displayPercentText = percentScaled.toFixed(4);
+      } else {
+        displayPercentText = percentScaled.toFixed(2);
+      }
+    } else {
+      displayPercentText = '0.00'; // Fallback for NaN or non-numeric percent
+    }
 
     return (
       <div className="bg-background/80 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl text-sm">
         <p className="font-bold text-foreground mb-1">{name}</p>
         <p className="text-muted-foreground">
-          Amount: <span className="font-medium text-foreground">₺{value.toFixed(2)}</span>
+          Amount: <span className="font-medium text-foreground">₺{typeof value === 'number' ? value.toFixed(2) : 'N/A'}</span>
         </p>
         <p className="text-muted-foreground">
-          Percentage: <span className="font-medium text-foreground">{displayPercent}%</span>
+          Percentage: <span className="font-medium text-foreground">{displayPercentText}%</span>
         </p>
       </div>
     );
@@ -124,7 +136,7 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [category, setCategory] = useState(categories[0]);
-  const [amount, setAmount] = useState<string>(""); // Changed to string for controlled input
+  const [amount, setAmount] = useState<string>(""); 
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
@@ -569,24 +581,26 @@ export default function Home() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
                     const RADIAN = Math.PI / 180;
-                    const radiusPercent = innerRadius + (outerRadius - innerRadius) * 0.45;
-                    const xPercent = cx + radiusPercent * Math.cos(-midAngle * RADIAN);
-                    const yPercent = cy + radiusPercent * Math.sin(-midAngle * RADIAN);
+                    const radiusPercentLabel = innerRadius + (outerRadius - innerRadius) * 0.45;
+                    const xPercentLabel = cx + radiusPercentLabel * Math.cos(-midAngle * RADIAN);
+                    const yPercentLabel = cy + radiusPercentLabel * Math.sin(-midAngle * RADIAN);
                 
-                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30);
-                    const xName = cx + radiusName * Math.cos(-midAngle * RADIAN);
-                    const yName = cy + radiusName * Math.sin(-midAngle * RADIAN);
+                    const radiusNameLabel = outerRadius + (window.innerWidth < 640 ? 20 : 30);
+                    const xNameLabel = cx + radiusNameLabel * Math.cos(-midAngle * RADIAN);
+                    const yNameLabel = cy + radiusNameLabel * Math.sin(-midAngle * RADIAN);
                 
                     const displayPercentVal = (typeof percent === 'number' && !isNaN(percent)) ? (percent * 100).toFixed(0) : '0';
-                    if (parseFloat(displayPercentVal) < 2 && spendingData.length > 5) return null; 
+                    
+                    if (typeof value === 'number' && value === 0) return null; // Don't label zero-value slices
+                    if (spendingData.length > 5 && parseFloat(displayPercentVal) < 2) return null; 
                 
                     return (
                       <>
                         <text
-                          x={xPercent}
-                          y={yPercent}
+                          x={xPercentLabel}
+                          y={yPercentLabel}
                           fill="hsl(var(--card-foreground))"
                           textAnchor="middle"
                           dominantBaseline="central"
@@ -597,10 +611,10 @@ export default function Home() {
                           {`${displayPercentVal}%`}
                         </text>
                         <text
-                          x={xName}
-                          y={yName}
+                          x={xNameLabel}
+                          y={yNameLabel}
                           fill="hsl(var(--foreground))"
-                          textAnchor={xName > cx ? "start" : "end"}
+                          textAnchor={xNameLabel > cx ? "start" : "end"}
                           dominantBaseline="central"
                           fontSize={window.innerWidth < 640 ? 10 : 14}
                           className="font-medium pointer-events-none"
