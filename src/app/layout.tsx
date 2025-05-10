@@ -25,8 +25,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // maximumScale: 1, // Removed to allow zooming
+  userScalable: true, // Changed to true to allow user scaling
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'hsl(0 0% 100%)' },
     { media: '(prefers-color-scheme: dark)', color: 'hsl(0 0% 3.9%)' },
@@ -48,15 +48,16 @@ export default function RootLayout({
               (function() {
                 try {
                   const storedDarkMode = localStorage.getItem('darkMode');
-                  if (storedDarkMode === 'true') {
-                    document.documentElement.classList.add('dark');
-                  } else { 
-                    // Default to light (remove dark class if present) or if value is 'false' or null
+                  if (storedDarkMode === 'false') {
+                    // If 'false', remove 'dark' class if present
                     document.documentElement.classList.remove('dark');
+                  } else { 
+                    // If 'true' or null (not set), add 'dark' class
+                    document.documentElement.classList.add('dark');
                   }
                 } catch (e) {
-                  // Fallback if localStorage is not available or other error, default to light
-                  document.documentElement.classList.remove('dark');
+                  // Fallback or if localStorage is unavailable, default to adding 'dark'
+                  document.documentElement.classList.add('dark');
                 }
               })();
             `,
@@ -69,4 +70,3 @@ export default function RootLayout({
     </html>
   );
 }
-

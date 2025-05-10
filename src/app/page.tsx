@@ -147,7 +147,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(false); 
+  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -182,7 +182,9 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === "true"; // Default to false (light)
+      // If darkMode is not in localStorage, default to true (dark mode)
+      // Otherwise, use the stored value.
+      const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -351,14 +353,14 @@ export default function Home() {
     <TooltipProvider>
       <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
         <Toaster />
-        <header className="flex justify-between items-center mb-6 sm:mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
+        <header className="flex flex-col sm:flex-row justify-between items-center sm:items-center mb-6 sm:mb-8 gap-4 sm:gap-0">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center text-center sm:text-left">
             <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
             PocketLedger Pro
           </h1>
-          <div className="flex items-center space-x-2 sm:space-x-4">
+          <div className="flex flex-col items-center space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2 md:space-x-4">
             <Link href="/notes" passHref>
-              <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+              <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
                 <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 My Notes
               </Button>
@@ -755,4 +757,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-

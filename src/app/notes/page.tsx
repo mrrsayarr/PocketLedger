@@ -57,11 +57,13 @@ export default function NotesPage() {
   useEffect(() => {
     // Theme synchronization
     const storedDarkMode = localStorage.getItem('darkMode');
-    if (storedDarkMode === 'true') { // Add dark class only if explicitly 'true'
-      document.documentElement.classList.add('dark');
-    } else { 
-      // Default to light (remove dark class if present) or if value is 'false' or null
-      document.documentElement.classList.remove('dark');
+    if (typeof window !== "undefined") { // Ensure this runs client-side
+        if (storedDarkMode === 'false') { 
+            document.documentElement.classList.remove('dark');
+        } else { 
+            // Default to dark if 'true' or null (not set)
+            document.documentElement.classList.add('dark');
+        }
     }
 
     // Existing notes loading logic
@@ -143,13 +145,13 @@ export default function NotesPage() {
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
       <Toaster />
-      <header className="flex justify-between items-center mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center">
+      <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
           <Icons.notebook className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
           Financial Notes
         </h1>
         <Link href="/" passHref>
-          <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all">
+          <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
             <Icons.arrowLeft className="mr-2 h-5 w-5" />
             Back to Dashboard
           </Button>
@@ -313,4 +315,3 @@ export default function NotesPage() {
     </div>
   );
 }
-
