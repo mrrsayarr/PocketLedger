@@ -8,7 +8,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,14 +57,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
 
 // Define type for a transaction
 type Transaction = {
@@ -74,28 +65,8 @@ type Transaction = {
   category: string;
   amount: number;
   type: "income" | "expense";
-  currency: string;
   notes?: string;
 };
-
-type Currency = {
-  code: string;
-  symbol: string;
-  name: string;
-};
-
-const supportedCurrencies: Currency[] = [
-  { code: "TRY", symbol: "₺", name: "Turkish Lira" },
-  { code: "USD", symbol: "$", name: "US Dollar" },
-  { code: "EUR", symbol: "€", name: "Euro" },
-  { code: "GBP", symbol: "£", name: "British Pound" },
-];
-
-const getCurrencySymbol = (currencyCode: string): string => {
-  const currency = supportedCurrencies.find(c => c.code === currencyCode);
-  return currency ? currency.symbol : currencyCode;
-};
-
 
 // Predefined categories
 const categories = [
@@ -122,7 +93,7 @@ const COLORS = [
   "#FFC107", "#FF9800", "#FF5722", "#9E9E9E", "#3F51B5",
 ];
 
-const CustomTooltip = ({ active, payload, label, displayCurrencySymbol }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const name = data.name;
@@ -137,7 +108,7 @@ const CustomTooltip = ({ active, payload, label, displayCurrencySymbol }: any) =
       <div className="bg-background/80 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl text-sm">
         <p className="font-bold text-foreground mb-1">{name}</p>
         <p className="text-muted-foreground">
-          Amount: <span className="font-medium text-foreground">{displayCurrencySymbol}{value.toFixed(2)}</span>
+          Amount: <span className="font-medium text-foreground">₺{value.toFixed(2)}</span>
         </p>
         <p className="text-muted-foreground">
           Percentage: <span className="font-medium text-foreground">{displayPercent}%</span>
@@ -164,29 +135,29 @@ export default function Home() {
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
-  const [displayCurrency, setDisplayCurrency] = useState<string>("TRY");
+  const displayCurrencySymbol = "₺"; // Hardcoded to TL symbol
 
   const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
     setTransactions(transactionsFromDb);
   }, []);
 
-  const loadDashboardData = useCallback(async (currencyToDisplay: string) => {
-    const balance = await getTotalBalanceFromDb(currencyToDisplay);
+  const loadDashboardData = useCallback(async () => {
+    const balance = await getTotalBalanceFromDb();
     setCurrentBalance(balance);
-    const income = await getTotalIncomeFromDb(currencyToDisplay);
+    const income = await getTotalIncomeFromDb();
     setTotalIncome(income);
-    const expenses = await getTotalExpenseFromDb(currencyToDisplay);
+    const expenses = await getTotalExpenseFromDb();
     setTotalExpenses(expenses);
-    const spending = await getSpendingByCategoryFromDb(currencyToDisplay);
+    const spending = await getSpendingByCategoryFromDb();
     setSpendingData(
       spending.map((item) => ({ name: item.category, value: item.total }))
     );
   }, []); 
 
-  const loadInitialData = useCallback(async (currentDisplayCurrency: string) => {
+  const loadInitialData = useCallback(async () => {
     await loadTransactions();
-    await loadDashboardData(currentDisplayCurrency);
+    await loadDashboardData();
   }, [loadTransactions, loadDashboardData]);
   
  useEffect(() => {
@@ -215,29 +186,15 @@ export default function Home() {
   }, [darkMode]);
 
   useEffect(() => {
-    const initializeAppData = async () => {
-      if (typeof window !== 'undefined') {
-        const storedDisplayCurrency = localStorage.getItem("displayCurrency");
-        const initialDisplayCurrency = storedDisplayCurrency || "TRY";
-        setDisplayCurrency(initialDisplayCurrency);
-      }
-    };
-    initializeAppData();
-  }, []); 
-  
-  useEffect(() => {
-    if (displayCurrency && typeof window !== 'undefined') {
-        localStorage.setItem("displayCurrency", displayCurrency);
-        loadInitialData(displayCurrency).catch(error => {
-            console.error("Error Loading Data:", error);
-            toast({
-                title: "Error Loading Data",
-                description: "Could not load initial financial data. Please refresh.",
-                variant: "destructive",
-            });
+    loadInitialData().catch(error => {
+        console.error("Error Loading Data:", error);
+        toast({
+            title: "Error Loading Data",
+            description: "Could not load initial financial data. Please refresh.",
+            variant: "destructive",
         });
-    }
-  }, [displayCurrency, loadInitialData, toast]);
+    });
+  }, [loadInitialData, toast]);
 
 
   const addTransaction = async () => {
@@ -264,7 +221,6 @@ export default function Home() {
         category,
         amount,
         type,
-        displayCurrency, // Use displayCurrency for new transactions
         notes
       );
       dbOpSuccessful = true;
@@ -279,7 +235,7 @@ export default function Home() {
         description: "Transaction added successfully.",
       });
       await loadTransactions(); 
-      await loadDashboardData(displayCurrency); 
+      await loadDashboardData(); 
     } catch (error) { 
         console.error("Error during transaction operation:", error);
         if (dbOpSuccessful) {
@@ -305,7 +261,7 @@ export default function Home() {
       description: "Transaction deleted successfully.",
     });
     await loadTransactions();
-    await loadDashboardData(displayCurrency);
+    await loadDashboardData();
   };
 
   const toggleDarkMode = () => {
@@ -318,8 +274,8 @@ export default function Home() {
       title: "Success!",
       description: "All your data has been reset.",
     });
-    await loadInitialData(displayCurrency);
-  }, [toast, loadInitialData, displayCurrency]);
+    await loadInitialData();
+  }, [toast, loadInitialData]);
 
   useEffect(() => {
     const pressedKeys = new Set<string>();
@@ -352,8 +308,6 @@ export default function Home() {
     };
   }, [handleResetData]);
 
-  const displayCurrencySymbol = getCurrencySymbol(displayCurrency);
-
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
@@ -370,18 +324,6 @@ export default function Home() {
               My Notes
             </Button>
           </Link>
-           <Select value={displayCurrency} onValueChange={setDisplayCurrency}>
-            <SelectTrigger className="w-[100px] sm:w-[120px] rounded-lg shadow-md text-xs sm:text-sm h-9 sm:h-10">
-              <SelectValue placeholder="Currency" />
-            </SelectTrigger>
-            <SelectContent className="rounded-lg">
-              {supportedCurrencies.map((currency) => (
-                <SelectItem key={currency.code} value={currency.code} className="text-xs sm:text-sm">
-                  {currency.code} ({currency.symbol})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <div className="flex items-center space-x-1 sm:space-x-2">
             <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
               {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
@@ -458,8 +400,7 @@ export default function Home() {
                   ))}
                 </select>
               </div>
-               <div className="grid grid-cols-1 gap-4"> {/* Changed to 1 column as currency select is removed */}
-                <div>
+               <div>
                   <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
                   <Input
                     type="number"
@@ -471,7 +412,6 @@ export default function Home() {
                     aria-label="Enter transaction amount"
                   />
                 </div>
-              </div>
               <div>
                 <Label htmlFor="type-select" className="mb-1 font-medium text-card-foreground">Type</Label>
                 <select
@@ -543,7 +483,7 @@ export default function Home() {
                     )}
                   >
                     {transaction.type === "income" ? "+" : "-"}
-                    {getCurrencySymbol(transaction.currency)}{transaction.amount.toFixed(2)}
+                    {displayCurrencySymbol}{transaction.amount.toFixed(2)}
                   </TableCell>
                   <TableCell className="text-sm">
                     <span
@@ -610,7 +550,7 @@ export default function Home() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }) => {
+                  label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
                     const RADIAN = Math.PI / 180;
                     const radiusPercent = innerRadius + (outerRadius - innerRadius) * 0.45;
                     const xPercent = cx + radiusPercent * Math.cos(-midAngle * RADIAN);
@@ -668,7 +608,7 @@ export default function Home() {
                     />
                   ))}
                 </Pie>
-                <RechartsTooltip content={<CustomTooltip displayCurrencySymbol={displayCurrencySymbol} />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
                 <Legend
                   layout="horizontal"
                   verticalAlign="bottom"
@@ -726,6 +666,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
-

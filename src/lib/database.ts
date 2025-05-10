@@ -31,7 +31,6 @@ const initializeDatabase = async (): Promise<SQLiteDatabase> => {
     console.warn('Failed to enable WAL mode. This might impact concurrency but is not critical for basic operations.', walError);
   }
 
-  // Ensure 'transactions' table is created with the 'currency' column
   await db.exec(`
     CREATE TABLE IF NOT EXISTS transactions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,28 +38,46 @@ const initializeDatabase = async (): Promise<SQLiteDatabase> => {
       category TEXT NOT NULL,
       amount REAL NOT NULL,
       type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-      currency TEXT NOT NULL DEFAULT 'TRY', -- Added currency column directly
       notes TEXT
     )
   `);
-  console.log("'transactions' table ensured (created with currency column if not exists).");
-
-  // Fallback: Check and add 'currency' column to 'transactions' if it somehow still doesn't exist
-  // This is mainly for databases created by a version of the code that did not include 'currency' in the initial CREATE.
+  console.log("'transactions' table ensured (created without currency column if not exists).");
+  
+  // Check if 'currency' column exists and remove it if it does (for older DBs)
   try {
     const tableInfo = await db.all(`PRAGMA table_info(transactions);`);
     const columns = tableInfo as Array<{ name: string; [key: string]: any }>;
     const currencyColumnExists = columns.some(column => column.name === 'currency');
-    
-    if (!currencyColumnExists) {
-      console.log("'transactions' table exists but 'currency' column is missing. Attempting to add it via ALTER TABLE.");
-      await db.exec(`ALTER TABLE transactions ADD COLUMN currency TEXT NOT NULL DEFAULT 'TRY';`);
-      console.log("'currency' column added to 'transactions' table successfully via ALTER TABLE.");
+
+    if (currencyColumnExists) {
+      console.log("'transactions' table has a 'currency' column. Attempting to remove it by recreating the table.");
+      // Recreate table without currency column
+      await db.exec('BEGIN TRANSACTION;');
+      await db.exec(`
+        CREATE TABLE transactions_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          date TEXT NOT NULL,
+          category TEXT NOT NULL,
+          amount REAL NOT NULL,
+          type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
+          notes TEXT
+        );
+      `);
+      // Copy data from old table to new table, omitting currency
+      await db.exec(`
+        INSERT INTO transactions_new (id, date, category, amount, type, notes)
+        SELECT id, date, category, amount, type, notes FROM transactions;
+      `);
+      await db.exec('DROP TABLE transactions;');
+      await db.exec('ALTER TABLE transactions_new RENAME TO transactions;');
+      await db.exec('COMMIT;');
+      console.log("'currency' column removed from 'transactions' table by recreating it.");
     } else {
-      console.log("'currency' column already exists in 'transactions' table or was just created.");
+      console.log("'currency' column does not exist in 'transactions' table or was already removed.");
     }
   } catch (e: any) {
-    console.warn("Could not check/add 'currency' column to 'transactions' via ALTER TABLE. This might be an issue if the table schema is outdated and the initial CREATE failed to include it.", e.message);
+    await db.exec('ROLLBACK;').catch(rbError => console.error("Error rolling back transaction during currency column removal:", rbError));
+    console.warn("Could not remove 'currency' column from 'transactions' via table recreation. This might be an issue if the table schema is outdated.", e.message);
   }
 
 
@@ -109,7 +126,7 @@ const getDbInstance = async (): Promise<SQLiteDatabase> => {
 };
 
 
-export const addTransactionToDb = async (date: string, category: string, amount: number, type: 'income' | 'expense', currency: string, notes?: string) => {
+export const addTransactionToDb = async (date: string, category: string, amount: number, type: 'income' | 'expense', notes?: string) => {
   let db: SQLiteDatabase;
   try {
     db = await getDbInstance();
@@ -120,14 +137,13 @@ export const addTransactionToDb = async (date: string, category: string, amount:
   }
 
   try {
-    console.log('Attempting to insert transaction with data:', { date, category, amount, type, currency, notes });
+    console.log('Attempting to insert transaction with data:', { date, category, amount, type, notes });
     const result = await db.run(
-      'INSERT INTO transactions (date, category, amount, type, currency, notes) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO transactions (date, category, amount, type, notes) VALUES (?, ?, ?, ?, ?)',
       date,
       category,
       amount,
       type,
-      currency,
       notes || null
     );
     console.log('Transaction insert attempt result (sqlite/driver specific):', result);
@@ -160,8 +176,8 @@ export const deleteTransactionFromDb = async (id: number) => {
 export const getAllTransactionsFromDb = async () => {
   const db = await getDbInstance();
   console.log('Fetching all transactions from DB.');
-  const transactionsFromDb: Array<{ id: number; date: string; category: string; amount: number; type: 'income' | 'expense'; currency: string; notes?: string }> = await db.all(
-    'SELECT * FROM transactions ORDER BY date DESC, id DESC'
+  const transactionsFromDb: Array<{ id: number; date: string; category: string; amount: number; type: 'income' | 'expense'; notes?: string }> = await db.all(
+    'SELECT id, date, category, amount, type, notes FROM transactions ORDER BY date DESC, id DESC'
   );
   console.log(`Fetched ${transactionsFromDb.length} transactions.`);
   return transactionsFromDb.map(transaction => ({
@@ -170,45 +186,41 @@ export const getAllTransactionsFromDb = async () => {
   }));
 };
 
-export const getTotalBalanceFromDb = async (currency: string): Promise<number> => {
+export const getTotalBalanceFromDb = async (): Promise<number> => {
   const db = await getDbInstance();
-  console.log(`Calculating total balance for currency: ${currency}`);
+  console.log(`Calculating total balance.`);
   const result = await db.get<{ totalBalance: number }>(
-    `SELECT SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END) AS totalBalance FROM transactions WHERE currency = ?`,
-    currency
+    `SELECT SUM(CASE WHEN type = 'income' THEN amount ELSE -amount END) AS totalBalance FROM transactions`
   );
-  console.log(`Total balance for ${currency}: ${result?.totalBalance || 0}`);
+  console.log(`Total balance: ${result?.totalBalance || 0}`);
   return Number(result?.totalBalance || 0);
 };
 
-export const getTotalIncomeFromDb = async (currency: string): Promise<number> => {
+export const getTotalIncomeFromDb = async (): Promise<number> => {
   const db = await getDbInstance();
-  console.log(`Calculating total income for currency: ${currency}`);
+  console.log(`Calculating total income.`);
   const result = await db.get<{ totalIncome: number }>(
-    `SELECT SUM(amount) AS totalIncome FROM transactions WHERE type = 'income' AND currency = ?`,
-    currency
+    `SELECT SUM(amount) AS totalIncome FROM transactions WHERE type = 'income'`
   );
-  console.log(`Total income for ${currency}: ${result?.totalIncome || 0}`);
+  console.log(`Total income: ${result?.totalIncome || 0}`);
   return Number(result?.totalIncome || 0);
 };
 
-export const getTotalExpenseFromDb = async (currency: string): Promise<number> => {
+export const getTotalExpenseFromDb = async (): Promise<number> => {
   const db = await getDbInstance();
-  console.log(`Calculating total expense for currency: ${currency}`);
+  console.log(`Calculating total expense.`);
   const result = await db.get<{ totalExpense: number }>(
-    `SELECT SUM(amount) AS totalExpense FROM transactions WHERE type = 'expense' AND currency = ?`,
-    currency
+    `SELECT SUM(amount) AS totalExpense FROM transactions WHERE type = 'expense'`
   );
-  console.log(`Total expense for ${currency}: ${result?.totalExpense || 0}`);
+  console.log(`Total expense: ${result?.totalExpense || 0}`);
   return Number(result?.totalExpense || 0);
 };
 
-export const getSpendingByCategoryFromDb = async (currency: string): Promise<{ category: string; total: number }[]> => {
+export const getSpendingByCategoryFromDb = async (): Promise<{ category: string; total: number }[]> => {
   const db = await getDbInstance();
-  console.log(`Fetching spending by category for currency: ${currency}`);
+  console.log(`Fetching spending by category.`);
   const result: Array<{ category: string; total: number }> = await db.all(
-    `SELECT category, SUM(amount) AS total FROM transactions WHERE type = 'expense' AND currency = ? GROUP BY category ORDER BY total DESC`,
-    currency
+    `SELECT category, SUM(amount) AS total FROM transactions WHERE type = 'expense' GROUP BY category ORDER BY total DESC`
   );
   console.log(`Fetched ${result.length} categories for spending breakdown.`);
   return result.map(item => ({ category: item.category, total: Number(item.total) }));
@@ -228,14 +240,6 @@ export const resetAllDataInDb = async () => {
     console.log("'users' table dropped.");
 
     console.log("Re-initializing database tables via initializeDatabase logic...");
-    // Instead of duplicating CREATE TABLE statements, we can try to force re-initialization.
-    // However, getDbInstance manages a singleton promise/instance.
-    // The most straightforward way here is to re-run the CREATE statements
-    // as they are defined in initializeDatabase or just call initializeDatabase again
-    // if it can be made idempotent for table creation.
-    // For simplicity and directness, we'll re-issue the CREATEs as defined.
-    // Or better, make initializeDatabase handle this re-creation if db is passed.
-    // For now, re-issuing the CREATE as per the current good schema:
      await db.exec(`
       CREATE TABLE transactions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -243,7 +247,6 @@ export const resetAllDataInDb = async () => {
         category TEXT NOT NULL,
         amount REAL NOT NULL,
         type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-        currency TEXT NOT NULL DEFAULT 'TRY',
         notes TEXT
       )
     `);
@@ -300,4 +303,3 @@ export const checkPassword = async (passwordToCheck: string): Promise<boolean> =
   console.log('No password found for user ID 1 or user does not exist.');
   return false; 
 };
-
