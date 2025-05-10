@@ -184,12 +184,9 @@ export default function Home() {
       const storedDarkMode = localStorage.getItem("darkMode");
       const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
       setDarkMode(initialDarkMode);
-      if (initialDarkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      // Class application is handled by the useEffect hook observing `darkMode` state.
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -753,5 +750,6 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
 
 
