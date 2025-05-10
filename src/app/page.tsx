@@ -2,7 +2,7 @@
 "use client";
 
 import type { Metadata, Viewport } from 'next';
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, FormEvent, useCallback } from "react";
 import Link from 'next/link';
 import {
   Card,
@@ -126,58 +126,19 @@ export default function Home() {
   const [amount, setAmount] = useState<number | undefined>(0);
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
-  const [darkMode, setDarkMode] = useState(true); // Default to true
+  const [darkMode, setDarkMode] = useState(true);
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
-  
-  useEffect(() => {
-    const initializeApp = async () => {
-      // Check localStorage for darkMode setting
-      const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode !== null) {
-        const isDarkMode = storedDarkMode === "true";
-        setDarkMode(isDarkMode);
-        if (isDarkMode) {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-      } else {
-        // If no setting in localStorage, default to dark mode
-        setDarkMode(true);
-        document.documentElement.classList.add("dark");
-        localStorage.setItem("darkMode", "true");
-      }
-      await loadInitialData();
-    };
-    initializeApp();
-  }, []);
-  
-  useEffect(() => {
-    // This effect runs when `darkMode` state changes
-    // It updates localStorage and the class on <html>
-    localStorage.setItem("darkMode", darkMode.toString());
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
 
-  const loadInitialData = async () => {
-    await loadTransactions();
-    await loadDashboardData();
-  };
-
-  const loadTransactions = async () => {
+  const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
     setTransactions(transactionsFromDb);
-  };
+  }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     const balance = await getTotalBalanceFromDb();
     setCurrentBalance(balance);
     const income = await getTotalIncomeFromDb();
@@ -188,7 +149,42 @@ export default function Home() {
     setSpendingData(
       spending.map((item) => ({ name: item.category, value: item.total }))
     );
-  };
+  }, []);
+
+  const loadInitialData = useCallback(async () => {
+    await loadTransactions();
+    await loadDashboardData();
+  }, [loadTransactions, loadDashboardData]);
+  
+  useEffect(() => {
+    const initializeApp = async () => {
+      const storedDarkMode = localStorage.getItem("darkMode");
+      if (storedDarkMode !== null) {
+        const isDarkMode = storedDarkMode === "true";
+        setDarkMode(isDarkMode);
+        if (isDarkMode) {
+          document.documentElement.classList.add("dark");
+        } else {
+          document.documentElement.classList.remove("dark");
+        }
+      } else {
+        setDarkMode(true);
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("darkMode", "true");
+      }
+      await loadInitialData();
+    };
+    initializeApp();
+  }, [loadInitialData]);
+  
+  useEffect(() => {
+    localStorage.setItem("darkMode", darkMode.toString());
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
 
   const addTransaction = async () => {
     if (!date || !category || amount === undefined || amount === null) {
@@ -242,14 +238,53 @@ export default function Home() {
     setDarkMode((prevMode) => !prevMode);
   };
 
-  const handleResetData = async () => {
+  const handleResetData = useCallback(async () => {
     await resetAllDataInDb();
     toast({
       title: "Success!",
       description: "All your data has been reset.",
     });
     await loadInitialData();
-  };
+  }, [toast, loadInitialData]);
+
+  useEffect(() => {
+    const pressedKeys = new Set<string>();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+        // Add non-modifier keys to the set
+        if (event.key.toLowerCase() !== 'control' && event.key.toLowerCase() !== 'shift' && event.key.toLowerCase() !== 'alt' && event.key.toLowerCase() !== 'meta') {
+            pressedKeys.add(event.key.toLowerCase());
+        }
+
+        // Check for Ctrl + S + D
+        if (event.ctrlKey && pressedKeys.has('s') && pressedKeys.has('d')) {
+            // Ensure this event is for 's' or 'd' to finalize the combo while Ctrl is held.
+            if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
+                event.preventDefault(); // Prevent default browser actions (e.g., Ctrl+S for save)
+                // console.log('Ctrl+S+D shortcut triggered for Reset All Data');
+                handleResetData(); // Call directly without confirmation
+                
+                // Clear 's' and 'd' from the set to require them to be re-pressed for another trigger.
+                // This prevents continuous firing if Ctrl+S+D are held down.
+                pressedKeys.delete('s');
+                pressedKeys.delete('d');
+            }
+        }
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+        pressedKeys.delete(event.key.toLowerCase());
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [handleResetData]);
+
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
@@ -330,7 +365,7 @@ export default function Home() {
                 <Label htmlFor="category-select" className="mb-1 font-medium text-card-foreground">Category</Label>
                 <select
                   id="category-select"
-                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all"
+                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   aria-label="Select transaction category"
@@ -358,7 +393,7 @@ export default function Home() {
                 <Label htmlFor="type-select" className="mb-1 font-medium text-card-foreground">Type</Label>
                 <select
                   id="type-select"
-                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all"
+                  className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10"
                   value={type}
                   onChange={(e) => setType(e.target.value as "income" | "expense")}
                   aria-label="Select transaction type"
@@ -442,15 +477,35 @@ export default function Home() {
                   </TableCell>
                   <TableCell className="max-w-xs truncate text-foreground">{transaction.notes || "-"}</TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => deleteTransaction(transaction.id)}
-                      className="rounded-md shadow-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 transition-all transform hover:scale-105"
-                      aria-label={`Delete transaction for ${transaction.category} on ${format(new Date(transaction.date), "PPP")}`}
-                    >
-                      <Icons.trash className="h-4 w-4" />
-                    </Button>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-md shadow-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 transition-all transform hover:scale-105"
+                            aria-label={`Delete transaction for ${transaction.category} on ${format(new Date(transaction.date), "PPP")}`}
+                          >
+                            <Icons.trash className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[60]">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-card-foreground">Delete Transaction?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-muted-foreground">
+                              Are you sure you want to delete this transaction? This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteTransaction(transaction.id)}
+                              className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))}
@@ -478,7 +533,7 @@ export default function Home() {
                     const xPercent = cx + radiusPercent * Math.cos(-midAngle * RADIAN);
                     const yPercent = cy + radiusPercent * Math.sin(-midAngle * RADIAN);
                 
-                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30); // Adjusted for responsiveness
+                    const radiusName = outerRadius + (window.innerWidth < 640 ? 20 : 30);
                     const xName = cx + radiusName * Math.cos(-midAngle * RADIAN);
                     const yName = cy + radiusName * Math.sin(-midAngle * RADIAN);
                 
@@ -492,7 +547,7 @@ export default function Home() {
                           fill="hsl(var(--card-foreground))"
                           textAnchor="middle"
                           dominantBaseline="central"
-                          fontSize={window.innerWidth < 640 ? 10 : 12} // Adjusted for responsiveness
+                          fontSize={window.innerWidth < 640 ? 10 : 12}
                           fontWeight="bold"
                           className="opacity-90 pointer-events-none"
                         >
@@ -504,7 +559,7 @@ export default function Home() {
                           fill="hsl(var(--foreground))"
                           textAnchor={xName > cx ? "start" : "end"}
                           dominantBaseline="central"
-                          fontSize={window.innerWidth < 640 ? 10 : 14} // Adjusted for responsiveness
+                          fontSize={window.innerWidth < 640 ? 10 : 14}
                           className="font-medium pointer-events-none"
                         >
                           {name}
@@ -535,11 +590,11 @@ export default function Home() {
                   verticalAlign="bottom"
                   align="center"
                   wrapperStyle={{
-                    fontSize: window.innerWidth < 640 ? '10px' : '12px', // Adjusted for responsiveness
-                    paddingTop: '15px', // Ensure enough space for legend
+                    fontSize: window.innerWidth < 640 ? '10px' : '12px', 
+                    paddingTop: '15px', 
                     color: "hsl(var(--foreground))",
                   }}
-                  iconSize={window.innerWidth < 640 ? 8 : 10} // Adjusted for responsiveness
+                  iconSize={window.innerWidth < 640 ? 8 : 10} 
                   formatter={(value) => (
                     <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
                   )}
@@ -556,7 +611,7 @@ export default function Home() {
               <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+          <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
             <AlertDialogHeader>
               <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
               <AlertDialogDescription className="text-muted-foreground">
@@ -582,3 +637,4 @@ export default function Home() {
     </div>
   );
 }
+
