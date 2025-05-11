@@ -39,17 +39,35 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
 ### Installation
 
 1.  **Clone the repository (or download the source code):**
+<<<<<<< HEAD
     ```bash
     git clone https://mrrsayarr/pocketledger.git
     cd pocketledger-pro
     ```
 
 2.  **Install dependencies:**
+=======
+
+
+    ```bash
+    git clone https://mrrsayarr/pocketledger.git
+    cd pocketledger
+    ```
+
+2.  **Install dependencies:**
+
+>>>>>>> 2d74636 (add attention)
     Using npm:
     ```bash
     npm install
     ```
+<<<<<<< HEAD
     Or using yarn:
+=======
+    
+    Or using yarn:
+
+>>>>>>> 2d74636 (add attention)
     ```bash
     yarn install
     ```
@@ -57,42 +75,81 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
 ### Running the Development Server
 
 1.  **Start the development server:**
+<<<<<<< HEAD
+=======
+    
+>>>>>>> 2d74636 (add attention)
     Using npm:
     ```bash
     npm run dev
     ```
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2d74636 (add attention)
     Or using yarn:
     ```bash
     yarn dev
     ```
+<<<<<<< HEAD
     This will typically start the application on `http://localhost:9002`.
 
 2.  **Open your browser:**
+=======
+    
+    This will typically start the application on `http://localhost:9002`.
+
+2.  **Open your browser:**
+
+>>>>>>> 2d74636 (add attention)
     Navigate to `http://localhost:9002` to view the application.
 
 ### Building for Production
 
 1.  **Build the application:**
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2d74636 (add attention)
     Using npm:
     ```bash
     npm run build
     ```
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2d74636 (add attention)
     Or using yarn:
     ```bash
     yarn build
     ```
+<<<<<<< HEAD
     This command generates an optimized production build in the `.next` folder.
 
 2.  **Start the production server:**
+=======
+    
+    This command generates an optimized production build in the `.next` folder.
+
+2.  **Start the production server:**
+
+>>>>>>> 2d74636 (add attention)
     Using npm:
     ```bash
     npm run start
     ```
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2d74636 (add attention)
     Or using yarn:
     ```bash
     yarn start
     ```
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2d74636 (add attention)
 ## 📖 How to Use PocketLedger Pro
 
 ### Main Dashboard (Home Page)
@@ -105,12 +162,24 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
     *   **Type:** Select "Income" or "Expense".
     *   **Notes (Optional):** Add any relevant details about the transaction.
     *   Click "Add Transaction" to save.
+<<<<<<< HEAD
 *   **Transaction History:** A table displaying all your recorded transactions.
     *   Each row shows the date, category, amount, type, and notes.
     *   You can delete a transaction by clicking the trash icon in the "Actions" column. A confirmation dialog will appear.
 *   **Spending by Category:** A pie chart visualizing your expenses by category.
     *   Hover over a slice to see the category name, amount, and percentage of total spending.
     *   The legend below the chart lists the categories.
+=======
+
+*   **Transaction History:** A table displaying all your recorded transactions.
+    *   Each row shows the date, category, amount, type, and notes.
+    *   You can delete a transaction by clicking the trash icon in the "Actions" column. A confirmation dialog will appear.
+
+*   **Spending by Category:** A pie chart visualizing your expenses by category.
+    *   Hover over a slice to see the category name, amount, and percentage of total spending.
+    *   The legend below the chart lists the categories.
+
+>>>>>>> 2d74636 (add attention)
 *   **Dark/Light Mode Toggle:** Switch between dark and light themes using the toggle in the header. Your preference is saved locally.
 *   **My Notes Button:** Navigate to the Financial Notes page.
 
@@ -123,9 +192,17 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
     *   **Purchase Price (Optional):** Enter the purchase price of the asset. The currency symbol is hardcoded (₺).
     *   **Note Content:** Provide details about the asset, purchase date, strategy, etc.
     *   Click "Add Note" to save.
+<<<<<<< HEAD
 *   **Saved Notes:** Your notes are displayed in a list format, showing title, creation date, asset details (if provided), and content.
     *   You can delete a note using the trash icon next to each note, with a confirmation step.
 *   **Back to Dashboard Button:** Return to the main dashboard.
+=======
+
+*   **Saved Notes:** Your notes are displayed in a list format, showing title, creation date, asset details (if provided), and content.
+    *   You can delete a note using the trash icon next to each note, with a confirmation step.
+
+*   **Back to Dashboard Button:** Return to the main dashboard
+>>>>>>> 2d74636 (add attention)
 
 ### Data Management
 
@@ -142,6 +219,10 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
 ## 🔒 Data Privacy & Security
 
 PocketLedger Pro prioritizes your privacy. All financial data you enter is stored exclusively on your local device using your web browser's storage capabilities (IndexedDB and localStorage).
+<<<<<<< HEAD
+=======
+
+>>>>>>> 2d74636 (add attention)
 *   **No Cloud Sync:** Your data is not uploaded to any server.
 *   **Full Control:** You have complete control over your data. It remains on your computer/device unless you explicitly clear your browser's site data or use the "Reset All Data" feature.
 *   **Offline Access:** Since data is local, you can access and manage your finances even without an internet connection (after the initial load).
@@ -156,6 +237,7 @@ Contributions are welcome! If you have suggestions for improvements or find any 
 4.  Push to the Branch (`git push origin feature/AmazingFeature`)
 5.  Open a Pull Request
 
+<<<<<<< HEAD
 ## 📜 License
 
 This project is licensed under the MIT License - see the `LICENSE` file for details (if one exists).
@@ -163,3 +245,13 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 ---
 
 Thank you for using PocketLedger Pro! We hope it helps you manage your finances more effectively.
+=======
+
+
+## 📜 License
+
+This project is licensed under the MIT License - see the `LICENSE` file for details (if one exists).
+---
+
+Thank you for using PocketLedger Pro! We hope it helps you manage your finances more effectively.
+>>>>>>> 2d74636 (add attention)

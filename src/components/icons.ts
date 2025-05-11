@@ -1,5 +1,5 @@
 
-import {ArrowLeft, ArrowRight, Check, ChevronsUpDown, Circle, Copy, Edit, ExternalLink, File, FileText, HelpCircle, Home, Loader2, Mail, MessageSquare, Moon, Plus, PlusCircle, Search, Server, Settings, Share2, Shield, Sun, Trash, User, Workflow, Wallet, Notebook, RefreshCw, X, Info} from 'lucide-react';
+import {ArrowLeft, ArrowRight, Check, ChevronsUpDown, Circle, Copy, Edit, ExternalLink, File, FileText, HelpCircle, Home, Loader2, Mail, MessageSquare, Moon, Plus, PlusCircle, Search, Server, Settings, Share2, Shield, Sun, Trash, User, Workflow, Wallet, Notebook, RefreshCw, X, Info, AlertTriangle} from 'lucide-react';
 
 const Icons = {
   arrowLeft: ArrowLeft,
@@ -35,6 +35,8 @@ const Icons = {
   notebook: Notebook,
   refreshCw: RefreshCw,
   info: Info,
+  alertTriangle: AlertTriangle,
 };
 
 export {Icons};
+

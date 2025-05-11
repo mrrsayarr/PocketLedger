@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from 'next/link';
 import {
   Card,
@@ -63,6 +63,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 // Define type for a transaction
 type Transaction = {
@@ -147,7 +149,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(true); // Default to dark mode
+  const [darkMode, setDarkMode] = useState(true);
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -155,6 +157,9 @@ export default function Home() {
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
   const displayCurrencySymbol = "₺";
+
+  const prevBalanceRef = useRef<number>(0);
+  const [showNegativeBalanceAlert, setShowNegativeBalanceAlert] = useState(false);
 
   const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
@@ -182,9 +187,7 @@ export default function Home() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      // If darkMode is not in localStorage, default to true (dark mode)
-      // Otherwise, use the stored value.
-      const initialDarkMode = storedDarkMode === null ? true : storedDarkMode === "true";
+      const initialDarkMode = storedDarkMode === null ? false : storedDarkMode === "true"; // Default to light mode if not set
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -216,6 +219,15 @@ export default function Home() {
         });
     });
   }, [loadInitialData, toast]);
+
+  useEffect(() => {
+    if (currentBalance < 0 && prevBalanceRef.current >= 0) {
+      setShowNegativeBalanceAlert(true);
+    } else if (currentBalance >= 0) {
+      setShowNegativeBalanceAlert(false);
+    }
+    prevBalanceRef.current = currentBalance;
+  }, [currentBalance]);
 
 
   const addTransaction = async () => {
@@ -258,7 +270,7 @@ export default function Home() {
       });
       await loadTransactions(); 
       await loadDashboardData(); 
-    } catch (error) { 
+    } catch (error: any) { 
         console.error("Error during transaction operation:", error);
         if (dbOpSuccessful) {
             toast({
@@ -269,7 +281,7 @@ export default function Home() {
         } else {
             toast({
               title: "Database Error",
-              description: "Could not save the transaction. Please try again.",
+              description: error.message || "Could not save the transaction. Please try again.",
               variant: "destructive",
             });
         }
@@ -406,6 +418,16 @@ export default function Home() {
             </CardContent>
           </Card>
         </section>
+
+        {showNegativeBalanceAlert && (
+          <Alert variant="destructive" className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+            <Icons.alertTriangle className="h-5 w-5" />
+            <AlertTitle className="font-semibold text-lg">Attention: Balance is Negative</AlertTitle>
+            <AlertDescription className="text-base">
+              Your current balance has dropped below zero. It might be a good time to review your recent expenses or look for ways to increase your income. Careful planning can help you get back on track!
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
           <CardHeader>
@@ -757,3 +779,4 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
