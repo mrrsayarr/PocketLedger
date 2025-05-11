@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -64,6 +63,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import SlideToConfirmButton from '@/components/ui/slide-to-confirm-button';
 
 
 // Define type for a transaction
@@ -113,14 +113,13 @@ const CustomTooltip = ({ active, payload }: any) => {
       const percentScaled = percent * 100;
       if (percentScaled === 0) {
         displayPercentText = "0.00";
-      } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00") {
-        // For very small percentages that round to 0.00, show more precision
-        displayPercentText = percentScaled.toFixed(4); 
+      } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00" && percentScaled !== 0) {
+        displayPercentText = percentScaled.toFixed(Math.max(2, -Math.floor(Math.log10(percentScaled)) + 1 )); // Show more precision for small non-zero values
       } else {
         displayPercentText = percentScaled.toFixed(2);
       }
     } else {
-      displayPercentText = '0.00'; // Fallback if percent is not a valid number
+      displayPercentText = 'N/A'; // Fallback if percent is not a valid number
     }
     
     const displayCurrencySymbol = "₺";
@@ -197,9 +196,10 @@ export default function Home() {
     }
   }, [loadTransactions, loadDashboardData, toast]);
   
-  useEffect(() => {
+ useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
+      // Default to light mode if nothing is stored or if it's explicitly set to 'false'
       const initialDarkMode = storedDarkMode === 'true'; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
@@ -664,7 +664,6 @@ export default function Home() {
 
                       const displayPercentVal = (typeof percent === 'number' && !isNaN(percent)) ? (percent * 100).toFixed(0) : '0';
 
-                      // Do not render label if value is 0 or percent is too small (for many categories)
                       if (typeof value === 'number' && value === 0) return null; 
                       if (spendingData.length > 5 && parseFloat(displayPercentVal) < 2) return null;
 
@@ -709,7 +708,7 @@ export default function Home() {
                         key={`cell-${index}`}
                         fill={COLORS[index % COLORS.length]}
                         className="focus:outline-none transition-opacity duration-200 hover:opacity-70 cursor-pointer"
-                        tabIndex={0} // Make cells focusable for accessibility/keyboard nav
+                        tabIndex={0} 
                         aria-label={`${entry.name}: ${displayCurrencySymbol}${entry.value.toFixed(2)}`}
                       />
                     ))}
@@ -720,12 +719,12 @@ export default function Home() {
                     verticalAlign="bottom"
                     align="center"
                     wrapperStyle={{
-                      fontSize: window.innerWidth < 640 ? '10px' : '12px', // Responsive font size
-                      paddingTop: '15px', // Space above legend
-                      color: "hsl(var(--foreground))", // Ensure legend text color matches theme
+                      fontSize: window.innerWidth < 640 ? '10px' : '12px', 
+                      paddingTop: '15px', 
+                      color: "hsl(var(--foreground))", 
                     }}
-                    iconSize={window.innerWidth < 640 ? 8 : 10} // Responsive icon size
-                    formatter={(value) => ( // Ensure legend item text uses foreground color
+                    iconSize={window.innerWidth < 640 ? 8 : 10} 
+                    formatter={(value) => ( 
                       <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
                     )}
                   />
@@ -736,39 +735,15 @@ export default function Home() {
         )}
          <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
           <div className="container mx-auto flex flex-col items-center space-y-6">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                 <Button
-                    variant="outline"
-                    className="rounded-xl shadow-lg border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80 transition-all group flex items-center space-x-2 px-6 py-3 text-base font-semibold"
-                  >
-                    <Icons.alertTriangle className="h-5 w-5 transition-transform group-hover:scale-110 duration-200 ease-out" />
-                    <span>Erase All Application Data</span>
-                  </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="rounded-2xl bg-gradient-to-br from-card via-background to-card/70 dark:from-destructive/10 dark:via-background dark:to-background/80 backdrop-blur-lg border border-destructive/30 shadow-2xl p-8 max-w-md mx-auto z-[110]">
-                <AlertDialogHeader className="flex flex-col items-center text-center">
-                   <Icons.alertTriangle className="h-12 w-12 text-destructive mb-4" />
-                  <AlertDialogTitle className="flex items-center justify-center text-2xl font-bold text-destructive mb-3">
-                    Confirm Data Deletion
-                    </AlertDialogTitle>
-                  <AlertDialogDescription className="text-center text-muted-foreground mb-8 text-base px-2">
-                    This is an irreversible action. All your transactions and notes will be permanently wiped from the application. Are you absolutely sure you wish to proceed?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter className="flex flex-col sm:flex-row justify-around gap-3 w-full">
-                  <AlertDialogCancel className="rounded-lg hover:bg-muted/20 transition-colors w-full sm:w-auto px-6 py-2.5 text-base">
-                    Cancel Action
-                    </AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleResetData}
-                    className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold transition-colors w-full sm:w-auto px-6 py-2.5 text-base shadow-md hover:shadow-lg"
-                  >
-                    Yes, Delete Everything
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            
+            <SlideToConfirmButton
+              onConfirm={handleResetData}
+              buttonText="Erase All Application Data"
+              slideText="Slide to Erase All Data"
+              icon={<Icons.alertTriangle className="h-5 w-5 transition-transform group-hover:scale-110 duration-200 ease-out" />}
+              confirmedText="All Data Erased!"
+            />
+
             <p className="text-xs text-muted-foreground/80">
               (Tip: Press Shift + S + D to reset data without confirmation)
             </p>
@@ -800,5 +775,4 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
 
