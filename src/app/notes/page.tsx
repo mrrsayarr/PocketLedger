@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +30,28 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowDownUp } from "lucide-react";
 
 type Note = {
   id: string;
   title: string;
   content: string;
-  assetType?: string; 
+  assetType?: string;
   quantity?: number;
   purchasePrice?: number;
   createdAt: Date;
@@ -57,6 +73,8 @@ const currencies: Currency[] = [
 
 const assetCategories = ["Cryptocurrency", "Stocks", "Bonds", "Real Estate", "Commodities", "Forex", "Other"];
 
+type SortableKeys = keyof Pick<Note, 'title' | 'assetType' | 'quantity' | 'purchasePrice' | 'createdAt'>;
+
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [newNoteTitle, setNewNoteTitle] = useState("");
@@ -67,18 +85,19 @@ export default function NotesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [displayCurrencySymbol, setDisplayCurrencySymbol] = useState("₺");
   const { toast } = useToast();
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [sortConfig, setSortConfig] = useState<{ key: SortableKeys; direction: 'ascending' | 'descending' } | null>({ key: 'createdAt', direction: 'descending' });
+
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-        // Theme synchronization
         const storedDarkMode = localStorage.getItem('darkMode');
-        if (storedDarkMode === 'false') { 
+        if (storedDarkMode === 'false') {
             document.documentElement.classList.remove('dark');
-        } else { 
+        } else {
             document.documentElement.classList.add('dark');
         }
 
-        // Currency symbol
         const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
         if (storedCurrencyCode) {
             const foundCurrency = currencies.find(c => c.code === storedCurrencyCode);
@@ -89,7 +108,6 @@ export default function NotesPage() {
             setDisplayCurrencySymbol(currencies.find(c => c.code === 'TRY')?.symbol || '₺');
         }
 
-        // Load notes
         const storedNotes = localStorage.getItem("financialNotes");
         if (storedNotes) {
             try {
@@ -101,7 +119,7 @@ export default function NotesPage() {
             );
             } catch (error) {
             console.error("Failed to parse notes from localStorage:", error);
-            setNotes([]); 
+            setNotes([]);
             }
         }
         setIsLoading(false);
@@ -155,6 +173,45 @@ export default function NotesPage() {
     });
   };
 
+  const requestSort = (key: SortableKeys) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedNotes = useMemo(() => {
+    let sortableItems = [...notes];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
+
+        if (valA === undefined && valB === undefined) return 0;
+        if (valA === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
+        if (valB === undefined) return sortConfig.direction === 'ascending' ? 1 : -1;
+        
+        if (valA! < valB!) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (valA! > valB!) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [notes, sortConfig]);
+
+  const getSortIndicator = (key: SortableKeys) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowDownUp className="ml-2 h-4 w-4 text-muted-foreground/50" />;
+    }
+    return sortConfig.direction === 'ascending' ? <Icons.arrowUp className="ml-2 h-4 w-4" /> : <Icons.arrowDown className="ml-2 h-4 w-4" />;
+  };
+
+
   if (isLoading) {
     return (
       <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm">
@@ -165,6 +222,7 @@ export default function NotesPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
       <Toaster />
       <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
@@ -196,7 +254,7 @@ export default function NotesPage() {
               className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="note-asset-type" className="font-medium text-card-foreground">Asset Type (Optional)</Label>
@@ -241,7 +299,6 @@ export default function NotesPage() {
             </div>
           </div>
 
-
           <div>
             <Label htmlFor="note-content" className="font-medium text-card-foreground">Note Content</Label>
             <Textarea
@@ -261,9 +318,14 @@ export default function NotesPage() {
         </CardFooter>
       </Card>
 
-      <div className="space-y-6">
+      <Tabs defaultValue="card" onValueChange={(value) => setViewMode(value as 'card' | 'table')} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:w-[400px] rounded-lg shadow-md mb-6 bg-card/80 backdrop-blur-md">
+          <TabsTrigger value="card" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg">Card View</TabsTrigger>
+          <TabsTrigger value="table" className="rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg">Table View</TabsTrigger>
+        </TabsList>
+        
         {notes.length === 0 ? (
-          <Card className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+          <Card className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md col-span-2">
             <CardContent className="py-10 text-center">
               <Icons.fileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <p className="text-lg font-medium text-card-foreground">No financial notes yet.</p>
@@ -271,62 +333,146 @@ export default function NotesPage() {
             </CardContent>
           </Card>
         ) : (
-          notes.map((note) => (
-            <Card key={note.id} className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md hover:shadow-2xl transition-shadow duration-300">
-              <CardHeader className="flex flex-row justify-between items-start pb-3">
-                <div>
-                  <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">{note.title}</CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground">
-                    {format(new Date(note.createdAt), "PPP p")}
-                  </CardDescription>
-                </div>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                     <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-md">
-                        <Icons.trash className="h-4 w-4" />
-                      </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle className="text-card-foreground">Delete Note?</AlertDialogTitle>
-                      <AlertDialogDescription className="text-muted-foreground">
-                        Are you sure you want to delete the note titled "{note.title}"? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleDeleteNote(note.id)}
-                        className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </CardHeader>
-              <CardContent className="space-y-2 pt-0">
-                {note.assetType && (
-                  <p className="text-sm text-foreground">
-                    <span className="font-medium">Asset Type:</span> {note.assetType}
-                  </p>
-                )}
-                {(note.quantity !== undefined || note.purchasePrice !== undefined) && (
-                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground">
-                    {note.quantity !== undefined && (
-                    <p><span className="font-medium">Quantity:</span> {note.quantity}</p>
-                    )}
-                    {note.purchasePrice !== undefined && (
-                    <p><span className="font-medium">Purchase Price:</span> {displayCurrencySymbol}{note.purchasePrice.toFixed(2)}</p>
-                    )}
-                </div>
-                )}
-                <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
-              </CardContent>
+        <>
+        <TabsContent value="card">
+          <div className="space-y-6">
+            {sortedNotes.map((note) => (
+              <Card key={note.id} className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md hover:shadow-2xl transition-shadow duration-300">
+                <CardHeader className="flex flex-row justify-between items-start pb-3">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">{note.title}</CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      {format(new Date(note.createdAt), "PPP p")}
+                    </CardDescription>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                       <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 rounded-md">
+                          <Icons.trash className="h-4 w-4" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-card-foreground">Delete Note?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                          Are you sure you want to delete the note titled "{note.title}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardHeader>
+                <CardContent className="space-y-2 pt-0">
+                  {note.assetType && (
+                    <p className="text-sm text-foreground">
+                      <span className="font-medium">Asset Type:</span> {note.assetType}
+                    </p>
+                  )}
+                  {(note.quantity !== undefined || note.purchasePrice !== undefined) && (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground">
+                      {note.quantity !== undefined && (
+                      <p><span className="font-medium">Quantity:</span> {note.quantity}</p>
+                      )}
+                      {note.purchasePrice !== undefined && (
+                      <p><span className="font-medium">Purchase Price:</span> {displayCurrencySymbol}{note.purchasePrice.toFixed(2)}</p>
+                      )}
+                  </div>
+                  )}
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="table">
+            <Card className="rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+            <CardContent className="p-0 overflow-x-auto">
+                <Table>
+                <TableHeader>
+                    <TableRow>
+                    <TableHead onClick={() => requestSort('title')} className="cursor-pointer hover:bg-muted/50">
+                        <div className="flex items-center">Title {getSortIndicator('title')}</div>
+                    </TableHead>
+                    <TableHead onClick={() => requestSort('assetType')} className="cursor-pointer hover:bg-muted/50">
+                        <div className="flex items-center">Asset Type {getSortIndicator('assetType')}</div>
+                    </TableHead>
+                    <TableHead onClick={() => requestSort('quantity')} className="text-right cursor-pointer hover:bg-muted/50">
+                        <div className="flex items-center justify-end">Quantity {getSortIndicator('quantity')}</div>
+                    </TableHead>
+                    <TableHead onClick={() => requestSort('purchasePrice')} className="text-right cursor-pointer hover:bg-muted/50">
+                        <div className="flex items-center justify-end">Price ({displayCurrencySymbol}) {getSortIndicator('purchasePrice')}</div>
+                    </TableHead>
+                    <TableHead onClick={() => requestSort('createdAt')} className="cursor-pointer hover:bg-muted/50">
+                        <div className="flex items-center">Date {getSortIndicator('createdAt')}</div>
+                    </TableHead>
+                    <TableHead>Content</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {sortedNotes.map((note) => (
+                    <TableRow key={note.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="font-medium">{note.title}</TableCell>
+                        <TableCell>{note.assetType || "-"}</TableCell>
+                        <TableCell className="text-right">{note.quantity !== undefined ? note.quantity : "-"}</TableCell>
+                        <TableCell className="text-right">{note.purchasePrice !== undefined ? `${displayCurrencySymbol}${note.purchasePrice.toFixed(2)}` : "-"}</TableCell>
+                        <TableCell>{format(new Date(note.createdAt), "PP")}</TableCell>
+                        <TableCell>
+                        <Tooltip delayDuration={100}>
+                            <TooltipTrigger asChild>
+                            <p className="max-w-[150px] truncate cursor-default">{note.content}</p>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" align="start" className="max-w-sm bg-popover text-popover-foreground border shadow-lg rounded-md p-2 text-sm">
+                            <p className="whitespace-pre-wrap">{note.content}</p>
+                            </TooltipContent>
+                        </Tooltip>
+                        </TableCell>
+                        <TableCell className="text-right">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10 rounded-md h-8 w-8">
+                                <Icons.trash className="h-4 w-4" />
+                            </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+                            <AlertDialogHeader>
+                                <AlertDialogTitle className="text-card-foreground">Delete Note?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-muted-foreground">
+                                Are you sure you want to delete the note titled "{note.title}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                onClick={() => handleDeleteNote(note.id)}
+                                className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                >
+                                Delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </CardContent>
             </Card>
-          ))
+        </TabsContent>
+        </>
         )}
-      </div>
+      </Tabs>
+
       <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
         <div className="container mx-auto">
           <p className="text-sm text-foreground">
@@ -335,6 +481,7 @@ export default function NotesPage() {
         </div>
       </footer>
     </div>
+    </TooltipProvider>
   );
 }
 
