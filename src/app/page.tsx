@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -142,6 +141,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 
 export default function Home() {
+  const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [category, setCategory] = useState(categories[0]);
@@ -149,7 +149,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(false); // Default to light mode
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -184,10 +184,11 @@ export default function Home() {
     await loadDashboardData();
   }, [loadTransactions, loadDashboardData]);
   
-  useEffect(() => {
+useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === null ? false : storedDarkMode === "true"; // Default to light mode if not set
+      // Default to light mode if not set or set to 'false'
+      const initialDarkMode = storedDarkMode === "true"; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -209,15 +210,28 @@ export default function Home() {
     }
   }, [darkMode]);
 
-  useEffect(() => {
-    loadInitialData().catch(error => {
-        console.error("Error Loading Data:", error);
-        toast({
-            title: "Error Loading Data",
-            description: "Could not load initial financial data. Please refresh.",
-            variant: "destructive",
-        });
-    });
+useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+    loadInitialData()
+      .catch(error => {
+        if (isMounted) {
+            console.error("Error Loading Data:", error);
+            toast({
+                title: "Error Loading Data",
+                description: "Could not load initial financial data. Please refresh.",
+                variant: "destructive",
+            });
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
   }, [loadInitialData, toast]);
 
   useEffect(() => {
@@ -359,6 +373,16 @@ export default function Home() {
       e.preventDefault();
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm">
+        <Icons.loader className="h-16 w-16 animate-spin text-primary" />
+        <p className="mt-6 text-xl text-foreground font-medium">Loading dashboard...</p>
+        <p className="mt-2 text-muted-foreground">Please wait a moment.</p>
+      </div>
+    );
+  }
 
 
   return (
@@ -779,4 +803,3 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
