@@ -150,7 +150,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notes, setNotes] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(false); // Default to light mode
+  const [darkMode, setDarkMode] = useState(false); 
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -181,15 +181,26 @@ export default function Home() {
   }, []); 
 
   const loadInitialData = useCallback(async () => {
-    await loadTransactions();
-    await loadDashboardData();
-  }, [loadTransactions, loadDashboardData]);
+    setIsLoading(true);
+    try {
+      await loadTransactions();
+      await loadDashboardData();
+    } catch (error) {
+        console.error("Error Loading Data:", error);
+        toast({
+            title: "Error Loading Data",
+            description: "Could not load initial financial data. Please refresh.",
+            variant: "destructive",
+        });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadTransactions, loadDashboardData, toast]);
   
-useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      // Default to light mode if not set or set to 'false'
-      const initialDarkMode = storedDarkMode === "true"; 
+      const initialDarkMode = storedDarkMode === 'true'; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -197,7 +208,8 @@ useEffect(() => {
         document.documentElement.classList.remove("dark");
       }
     }
-  }, []);
+    loadInitialData();
+  }, [loadInitialData]);
 
 
   useEffect(() => {
@@ -210,30 +222,6 @@ useEffect(() => {
       }
     }
   }, [darkMode]);
-
-useEffect(() => {
-    let isMounted = true;
-    setIsLoading(true);
-    loadInitialData()
-      .catch(error => {
-        if (isMounted) {
-            console.error("Error Loading Data:", error);
-            toast({
-                title: "Error Loading Data",
-                description: "Could not load initial financial data. Please refresh.",
-                variant: "destructive",
-            });
-        }
-      })
-      .finally(() => {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      });
-      return () => {
-        isMounted = false;
-      };
-  }, [loadInitialData, toast]);
 
   useEffect(() => {
     if (currentBalance < 0 && prevBalanceRef.current >= 0) {
@@ -750,25 +738,33 @@ useEffect(() => {
           <div className="container mx-auto flex flex-col items-center space-y-6">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="rounded-lg shadow-md hover:bg-destructive/90 transition-all">
-                  <Icons.refreshCw className="mr-2 h-4 w-4" /> Reset All Data
-                </Button>
+                 <Button
+                    variant="outline"
+                    className="rounded-xl shadow-lg border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80 transition-all group flex items-center space-x-2 px-6 py-3 text-base font-semibold"
+                  >
+                    <Icons.alertTriangle className="h-5 w-5 transition-transform group-hover:scale-110 duration-200 ease-out" />
+                    <span>Erase All Application Data</span>
+                  </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-card-foreground">Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-muted-foreground">
-                    This action cannot be undone. This will permanently delete all
-                    your transaction data from the application.
+              <AlertDialogContent className="rounded-2xl bg-gradient-to-br from-card via-background to-card/70 dark:from-destructive/10 dark:via-background dark:to-background/80 backdrop-blur-lg border border-destructive/30 shadow-2xl p-8 max-w-md mx-auto z-[110]">
+                <AlertDialogHeader className="flex flex-col items-center text-center">
+                   <Icons.alertTriangle className="h-12 w-12 text-destructive mb-4" />
+                  <AlertDialogTitle className="flex items-center justify-center text-2xl font-bold text-destructive mb-3">
+                    Confirm Data Deletion
+                    </AlertDialogTitle>
+                  <AlertDialogDescription className="text-center text-muted-foreground mb-8 text-base px-2">
+                    This is an irreversible action. All your transactions and notes will be permanently wiped from the application. Are you absolutely sure you wish to proceed?
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="flex flex-col sm:flex-row justify-around gap-3 w-full">
+                  <AlertDialogCancel className="rounded-lg hover:bg-muted/20 transition-colors w-full sm:w-auto px-6 py-2.5 text-base">
+                    Cancel Action
+                    </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleResetData}
-                    className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                    className="rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground font-semibold transition-colors w-full sm:w-auto px-6 py-2.5 text-base shadow-md hover:shadow-lg"
                   >
-                    Continue
+                    Yes, Delete Everything
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -804,4 +800,5 @@ useEffect(() => {
     </TooltipProvider>
   );
 }
+
 
