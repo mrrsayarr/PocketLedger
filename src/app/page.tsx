@@ -222,6 +222,7 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       // Dark mode initialization
       const storedDarkMode = localStorage.getItem("darkMode");
+      // Default to light mode if not set or 'false'
       const initialDarkMode = storedDarkMode === 'true'; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
@@ -237,6 +238,8 @@ export default function Home() {
         if (foundCurrency) {
           setSelectedCurrency(foundCurrency);
         }
+      } else { // Default to TRY if nothing is stored
+         setSelectedCurrency(currencies.find(c => c.code === 'TRY') || currencies[0]);
       }
     }
     loadInitialData();
@@ -392,12 +395,13 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (/^\d*$/.test(value)) {
+    if (/^\d*$/.test(value)) { // Only allow digits
       setAmount(value);
     }
   };
 
   const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Prevent '.', ',', 'e', 'E', '+', '-'
     if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
       e.preventDefault();
     }
@@ -428,6 +432,12 @@ export default function Home() {
               <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
                 <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 My Notes
+              </Button>
+            </Link>
+            <Link href="/debt-reduction" passHref>
+              <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+                <Icons.trendingDown className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                Debt Plans
               </Button>
             </Link>
             <DropdownMenu>
@@ -839,6 +849,7 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
 
 
 
