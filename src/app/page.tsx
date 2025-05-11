@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -41,7 +40,7 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
-  resetAllDataInDb,
+  backupAndResetAllData, // Updated function name
 } from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
@@ -75,7 +74,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 
-// Define type for a transaction
 type Transaction = {
   id: number;
   date: Date;
@@ -99,8 +97,6 @@ const currencies: Currency[] = [
   { symbol: "¥", code: "JPY", name: "Japanese Yen" },
 ];
 
-
-// Predefined categories
 const categories = [
   "Salary", "Food", "Transport", "Entertainment", "Utilities", "Rent", "Healthcare", "Education", "Shopping", "Investments", "Gifts", "Travel", "Personal Care", "Home Improvement", "Insurance", "Taxes", "Debt Payments", "Savings", "Other",
   "Bonus", "Freelance", "Side Hustle", "Dividends", "Grants", "Lottery", "Refunds", "Allowance", "Pocket Money", "Social Security", "Pension", "Retirement Fund",
@@ -115,7 +111,6 @@ const categories = [
   "Public Transport Pass", "Taxi/Rideshare", "Bike Maintenance", "Gym Membership", "Sports Classes", "Medical Bills", "Prescriptions", "Dental Care", "Eye Care",
   "Therapy", "Vitamins & Supplements", "Concert Tickets", "Museums & Galleries", "Sporting Events", "Night Out", "Day Trips", "Vacation Accommodation", "Souvenirs"
 ];
-
 
 const CHART_COLORS = [
   "#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#33b8ff",
@@ -169,7 +164,7 @@ export default function Home() {
   const [category, setCategory] = useState(categories[0]);
   const [amount, setAmount] = useState<string>(""); 
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [notes, setNotes] = useState<string>("");
+  const [notesInput, setNotesInput] = useState<string>(""); // Renamed to avoid conflict
   
   const [darkMode, setDarkMode] = useState(false); 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
@@ -220,9 +215,7 @@ export default function Home() {
   
  useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Dark mode initialization
       const storedDarkMode = localStorage.getItem("darkMode");
-      // Default to light mode if not set or 'false'
       const initialDarkMode = storedDarkMode === 'true'; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
@@ -231,14 +224,13 @@ export default function Home() {
         document.documentElement.classList.remove("dark");
       }
 
-      // Currency initialization
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
       if (storedCurrencyCode) {
         const foundCurrency = currencies.find(c => c.code === storedCurrencyCode);
         if (foundCurrency) {
           setSelectedCurrency(foundCurrency);
         }
-      } else { // Default to TRY if nothing is stored
+      } else {
          setSelectedCurrency(currencies.find(c => c.code === 'TRY') || currencies[0]);
       }
     }
@@ -298,14 +290,14 @@ export default function Home() {
         category,
         numericAmount,
         type,
-        notes
+        notesInput
       );
       dbOpSuccessful = true;
 
       setDate(new Date());
       setCategory(categories[0]);
       setAmount(""); 
-      setNotes("");
+      setNotesInput("");
       setType("expense");
       toast({
         title: "Success",
@@ -354,22 +346,44 @@ export default function Home() {
   };
 
   const handleResetData = useCallback(async () => {
-    await resetAllDataInDb();
-    toast({
-      title: "Success!",
-      description: "All your data has been reset.",
-    });
-    await loadInitialData();
+    try {
+      const backupId = await backupAndResetAllData();
+      // Backup notes to localStorage
+      const notesData = localStorage.getItem("financialNotes");
+      if (notesData) {
+        localStorage.setItem(`financialNotes_backup_${backupId}`, notesData);
+      }
+      localStorage.removeItem("financialNotes");
+      // Also clear debt data if stored in localStorage
+      const debtData = localStorage.getItem("pocketLedgerDebts");
+      if (debtData) {
+        localStorage.setItem(`pocketLedgerDebts_backup_${backupId}`, debtData);
+      }
+      localStorage.removeItem("pocketLedgerDebts");
+
+
+      toast({
+        title: "Data Reset & Backed Up!",
+        description: "All data has been reset. You can restore from Settings.",
+        duration: 5000,
+      });
+      await loadInitialData();
+    } catch (error: any) {
+      console.error("Error resetting data:", error);
+      toast({
+        title: "Error Resetting Data",
+        description: error.message || "Could not reset data. Please try again.",
+        variant: "destructive",
+      });
+    }
   }, [toast, loadInitialData]);
 
   useEffect(() => {
     const pressedKeys = new Set<string>();
-
     const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key.toLowerCase() !== 'control' && event.key.toLowerCase() !== 'shift' && event.key.toLowerCase() !== 'alt' && event.key.toLowerCase() !== 'meta') {
             pressedKeys.add(event.key.toLowerCase());
         }
-
         if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
                 event.preventDefault(); 
@@ -379,14 +393,11 @@ export default function Home() {
             }
         }
     };
-
     const handleKeyUp = (event: KeyboardEvent) => {
         pressedKeys.delete(event.key.toLowerCase());
     };
-
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-
     return () => {
         window.removeEventListener('keydown', handleKeyDown);
         window.removeEventListener('keyup', handleKeyUp);
@@ -395,17 +406,18 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (/^\d*$/.test(value)) { // Only allow digits
-      setAmount(value);
+    if (/^\d*\.?\d*$/.test(value) || value === "") { // Allow digits and a single optional decimal point
+        // Ensure only one decimal point
+        if (value.split('.').length > 2) return;
+        
+        // Ensure only two digits after decimal
+        const parts = value.split('.');
+        if (parts[1] && parts[1].length > 2) return;
+
+        setAmount(value);
     }
   };
 
-  const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent '.', ',', 'e', 'E', '+', '-'
-    if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
-      e.preventDefault();
-    }
-  };
 
   if (isLoading) {
     return (
@@ -420,7 +432,7 @@ export default function Home() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
         <Toaster />
         <header className="flex flex-col sm:flex-row justify-between items-center sm:items-center mb-6 sm:mb-8 gap-4 sm:gap-0">
           <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center text-center sm:text-left">
@@ -438,6 +450,12 @@ export default function Home() {
               <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
                 <Icons.trendingDown className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Debt Plans
+              </Button>
+            </Link>
+            <Link href="/settings" passHref>
+              <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+                <Icons.settings className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                Settings
               </Button>
             </Link>
             <DropdownMenu>
@@ -551,18 +569,16 @@ export default function Home() {
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount</Label>
+                  <Label htmlFor="amount-input" className="mb-1 font-medium text-card-foreground">Amount ({selectedCurrency.symbol})</Label>
                   <Input
                     type="text" 
                     id="amount-input"
                     value={amount}
                     onChange={handleAmountChange}
-                    onKeyDown={handleAmountKeyDown}
                     className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
                     placeholder="e.g. 100"
                     aria-label="Enter transaction amount"
-                    inputMode="numeric" 
-                    pattern="[0-9]*"
+                    inputMode="decimal" 
                   />
                 </div>
                 <div>
@@ -583,8 +599,8 @@ export default function Home() {
                 <Label htmlFor="notes-textarea" className="mb-1 font-medium text-card-foreground">Notes (Optional)</Label>
                 <Textarea
                   id="notes-textarea"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  value={notesInput}
+                  onChange={(e) => setNotesInput(e.target.value)}
                   className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all min-h-[80px] text-sm"
                   placeholder="Add any relevant notes..."
                   aria-label="Enter transaction notes"
@@ -663,7 +679,7 @@ export default function Home() {
                             <TooltipContent
                               side="top"
                               align="start"
-                              className="max-w-md bg-popover text-popover-foreground border shadow-lg rounded-md p-2 text-sm"
+                              className="max-w-md bg-popover text-popover-foreground border shadow-lg rounded-md p-2 text-sm z-50"
                             >
                               <p className="whitespace-pre-wrap">{transaction.notes}</p>
                             </TooltipContent>
@@ -740,7 +756,6 @@ export default function Home() {
 
                       if (typeof value === 'number' && value === 0) return null; 
                       if (spendingData.length > 5 && parseFloat(displayPercentVal) < 2) return null;
-
 
                       return (
                         <>
@@ -849,7 +864,4 @@ export default function Home() {
     </TooltipProvider>
   );
 }
-
-
-
-
+    

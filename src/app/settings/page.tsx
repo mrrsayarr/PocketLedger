@@ -1,0 +1,259 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Icons } from "@/components/icons";
+import { useToast } from "@/hooks/use-toast";
+import { Toaster } from "@/components/ui/toaster";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { listDatabaseBackups, restoreDatabaseBackup } from "@/lib/database";
+import { format, parse } from 'date-fns';
+
+
+interface BackupInfo {
+  id: string;
+  date: Date;
+  formattedDate: string;
+  hasTransactions: boolean;
+  hasNotes: boolean;
+  hasDebts: boolean;
+}
+
+export default function SettingsPage() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [backups, setBackups] = useState<BackupInfo[]>([]);
+  const { toast } = useToast();
+
+  const loadBackups = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const dbBackupIds = await listDatabaseBackups();
+      const allBackupIds = new Set<string>(dbBackupIds);
+
+      // Scan localStorage for notes and debt backups
+      const noteBackupPrefix = "financialNotes_backup_";
+      const debtBackupPrefix = "pocketLedgerDebts_backup_";
+      if (typeof window !== "undefined") {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith(noteBackupPrefix)) {
+            allBackupIds.add(key.substring(noteBackupPrefix.length));
+          }
+          if (key?.startsWith(debtBackupPrefix)) {
+            allBackupIds.add(key.substring(debtBackupPrefix.length));
+          }
+        }
+      }
+      
+      const parsedBackups: BackupInfo[] = Array.from(allBackupIds).map(id => {
+        let date = new Date(); // Default to now if parsing fails
+        try {
+          date = parse(id, "yyyyMMddHHmmss", new Date());
+        } catch (e) {
+          console.error(`Failed to parse backup ID ${id} as date:`, e);
+        }
+        return {
+          id,
+          date,
+          formattedDate: format(date, "PPP ppp"),
+          hasTransactions: dbBackupIds.includes(id), // Assumes users table is also part of this DB backup
+          hasNotes: typeof window !== "undefined" && !!localStorage.getItem(`${noteBackupPrefix}${id}`),
+          hasDebts: typeof window !== "undefined" && !!localStorage.getItem(`${debtBackupPrefix}${id}`),
+        };
+      }).sort((a,b) => b.date.getTime() - a.date.getTime()); // Sort newest first
+
+      setBackups(parsedBackups);
+
+    } catch (error: any) {
+      console.error("Error loading backups:", error);
+      toast({
+        title: "Error Loading Backups",
+        description: error.message || "Could not load backup information.",
+        variant: "destructive",
+      });
+      setBackups([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    // Theme synchronization
+    if (typeof window !== "undefined") {
+        const storedDarkMode = localStorage.getItem('darkMode');
+        if (storedDarkMode === 'false') { 
+          document.documentElement.classList.remove('dark');
+        } else {
+          document.documentElement.classList.add('dark');
+        }
+    }
+    loadBackups();
+  }, [loadBackups]);
+
+  const handleRestoreData = async (backupId: string) => {
+    try {
+      setIsLoading(true);
+      const backupToRestore = backups.find(b => b.id === backupId);
+      if (!backupToRestore) {
+        throw new Error("Selected backup not found.");
+      }
+
+      if (backupToRestore.hasTransactions) { // Assuming this also implies users table
+        await restoreDatabaseBackup(backupId);
+        console.log(`Database (transactions & users) for backup ${backupId} restored.`);
+      }
+
+      if (backupToRestore.hasNotes && typeof window !== "undefined") {
+        const notesData = localStorage.getItem(`financialNotes_backup_${backupId}`);
+        if (notesData) {
+          localStorage.setItem("financialNotes", notesData);
+          console.log(`Financial notes for backup ${backupId} restored.`);
+        }
+      }
+      
+      if (backupToRestore.hasDebts && typeof window !== "undefined") {
+        const debtData = localStorage.getItem(`pocketLedgerDebts_backup_${backupId}`);
+        if (debtData) {
+          localStorage.setItem("pocketLedgerDebts", debtData);
+          console.log(`Debt data for backup ${backupId} restored.`);
+        }
+      }
+
+
+      toast({
+        title: "Data Restored",
+        description: `Data from backup ${backupToRestore.formattedDate} has been restored. Please refresh other pages if open.`,
+        duration: 5000,
+      });
+      // Optionally, you might want to offer to delete the backup after restoration or refresh lists.
+      // For now, just a toast.
+    } catch (error: any) {
+      console.error("Error restoring data:", error);
+      toast({
+        title: "Error Restoring Data",
+        description: error.message || "Could not restore data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isLoading && backups.length === 0) { // Show loader only on initial load
+    return (
+      <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm text-foreground">
+        <Icons.loader className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-4 text-lg">Loading settings and backups...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
+      <Toaster />
+      <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
+          <Icons.settings className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
+          Application Settings
+        </h1>
+        <Link href="/" passHref>
+          <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+            <Icons.arrowLeft className="mr-2 h-5 w-5" />
+            Back to Dashboard
+          </Button>
+        </Link>
+      </header>
+
+      <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
+        <CardHeader>
+          <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Data Backups &amp; Restoration</CardTitle>
+          <CardDescription className="text-muted-foreground">
+            Restore your application data from a previous backup. Backups are created automatically when you use the "Erase All Application Data" feature.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading && <p className="text-muted-foreground text-center py-4">Refreshing backup list...</p>}
+          {!isLoading && backups.length === 0 && (
+            <div className="text-center py-6">
+              <Icons.fileText className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
+              <p className="text-lg font-medium text-card-foreground">No backups found.</p>
+              <p className="text-sm text-muted-foreground">Backups are created when you reset application data from the main dashboard.</p>
+            </div>
+          )}
+          {!isLoading && backups.length > 0 && (
+            <ul className="space-y-4">
+              {backups.map((backup) => (
+                <li key={backup.id} className="p-4 border rounded-lg shadow-sm bg-background/50 backdrop-blur-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <p className="font-semibold text-card-foreground">Backup from: {backup.formattedDate}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Contains: 
+                      {backup.hasTransactions && " Transactions, User Data"}
+                      {backup.hasNotes && ", Notes"}
+                      {backup.hasDebts && ", Debt Data"}
+                      {(!backup.hasTransactions && !backup.hasNotes && !backup.hasDebts) && " No specific data type found in this backup entry."}
+                    </p>
+                  </div>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="rounded-md shadow-sm hover:bg-primary/10 transition-all w-full sm:w-auto" disabled={isLoading}>
+                        <Icons.refreshCw className="mr-2 h-4 w-4" /> Restore This Backup
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-card-foreground">Confirm Restore</AlertDialogTitle>
+                        <AlertDialogDescription className="text-muted-foreground">
+                          Are you sure you want to restore data from {backup.formattedDate}? 
+                          This will overwrite your current application data (transactions, notes, debts, and user settings). This action cannot be undone directly, but you can restore another backup later.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="rounded-lg hover:bg-muted/20">Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleRestoreData(backup.id)}
+                          className="rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground"
+                          disabled={isLoading}
+                        >
+                          {isLoading ? <Icons.loader className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          Restore
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+      
+      <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
+        <div className="container mx-auto">
+          <p className="text-sm text-foreground">
+            © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+    
