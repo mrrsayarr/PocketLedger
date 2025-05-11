@@ -48,6 +48,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +61,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { getDebtTranslation, getTranslatedOptions, getDebtTypeKeyFromValue, getPaymentFrequencyKeyFromValue, type Language, debtTranslations } from "./translations";
+
 
 interface Currency {
   symbol: string;
@@ -70,14 +78,14 @@ const currencies: Currency[] = [
   { symbol: "¥", code: "JPY", name: "Japanese Yen" },
 ];
 
-type DebtPayment = {
+export type DebtPayment = {
   id: string;
   paymentDate: Date;
   amountPaid: number;
   notes?: string;
 };
 
-type Debt = {
+export type Debt = {
   id: string;
   name: string;
   lender: string;
@@ -107,28 +115,13 @@ type Debt = {
   isPaidOff: boolean;
 };
 
-const debtTypeOptions = [
-  "Credit Card",
-  "Consumer Loan",
-  "Mortgage",
-  "Student Loan",
-  "Auto Loan",
-  "Personal Debt",
-  "Other",
-];
-const paymentFrequencyOptions = [
-  "Monthly",
-  "Weekly",
-  "Bi-Weekly",
-  "Annually",
-  "One-time",
-];
 
 export default function DebtManagementPage() {
   const { toast } = useToast();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currencySymbol, setCurrencySymbol] = useState("₺");
+  const [currentLanguage, setCurrentLanguage] = useState<Language>("en");
 
   // New Debt Form State
   const [debtName, setDebtName] = useState("");
@@ -178,19 +171,30 @@ export default function DebtManagementPage() {
             }))
           );
         } catch (error) {
-          console.error("Failed to parse debts from localStorage:", error);
+          console.error(getDebtTranslation(currentLanguage, "toastLoadingError"), error);
           setDebts([]);
         }
       }
+      const storedLang = localStorage.getItem("pocketLedgerDebtLang") as Language | null;
+      if (storedLang && debtTranslations[storedLang]) {
+        setCurrentLanguage(storedLang);
+      }
       setIsLoading(false);
     }
-  }, []);
+  }, []); // currentLanguage removed as it's set here or by user action
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isLoading) {
       localStorage.setItem("pocketLedgerDebts", JSON.stringify(debts));
     }
   }, [debts, isLoading]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+     localStorage.setItem("pocketLedgerDebtLang", currentLanguage);
+    }
+  }, [currentLanguage]);
+
 
   const resetDebtForm = () => {
     setDebtName("");
@@ -208,16 +212,16 @@ export default function DebtManagementPage() {
 
   const handleAddDebt = () => {
     if (!debtName || !lender || !initialAmount || !minimumPayment || !nextDueDate || !paymentFrequency || !debtType) {
-      toast({ title: "Error", description: "Please fill all required fields.", variant: "destructive" });
+      toast({ title: getDebtTranslation(currentLanguage, "toastErrorTitle"), description: getDebtTranslation(currentLanguage, "toastFillRequiredFields"), variant: "destructive" });
       return;
     }
     const parsedInitialAmount = parseFloat(initialAmount);
-    const parsedCurrentBalance = parseFloat(currentBalanceForm || initialAmount); // Use initial if current is empty
+    const parsedCurrentBalance = parseFloat(currentBalanceForm || initialAmount);
     const parsedMinimumPayment = parseFloat(minimumPayment);
     const parsedInterestRate = interestRate ? parseFloat(interestRate) : undefined;
 
     if (isNaN(parsedInitialAmount) || isNaN(parsedCurrentBalance) || isNaN(parsedMinimumPayment) || (interestRate && isNaN(parsedInterestRate as number))) {
-        toast({ title: "Error", description: "Please enter valid numbers for amounts and rate.", variant: "destructive" });
+        toast({ title: getDebtTranslation(currentLanguage, "toastErrorTitle"), description: getDebtTranslation(currentLanguage, "toastValidNumbers"), variant: "destructive" });
         return;
     }
     
@@ -229,9 +233,9 @@ export default function DebtManagementPage() {
       currentBalance: parsedCurrentBalance,
       interestRate: parsedInterestRate,
       minimumPayment: parsedMinimumPayment,
-      paymentFrequency,
+      paymentFrequency, // Storing English key
       nextDueDate,
-      debtType,
+      debtType, // Storing English key
       startDate,
       notes: debtNotes,
       payments: [],
@@ -240,17 +244,17 @@ export default function DebtManagementPage() {
     };
     setDebts(prev => [newDebt, ...prev.filter(d => !d.isPaidOff), ...prev.filter(d => d.isPaidOff)]);
     resetDebtForm();
-    toast({ title: "Debt Added", description: `${debtName} has been added to your list.` });
+    toast({ title: getDebtTranslation(currentLanguage, "toastDebtAddedTitle"), description: getDebtTranslation(currentLanguage, "toastDebtAddedDescription", debtName) });
   };
 
   const handleDeleteDebt = (debtId: string) => {
     setDebts(prev => prev.filter(d => d.id !== debtId));
-    toast({ title: "Debt Deleted", variant: "destructive" });
+    toast({ title: getDebtTranslation(currentLanguage, "toastDebtDeletedTitle"), variant: "destructive" });
   };
 
   const handleOpenPaymentModal = (debt: Debt) => {
     setSelectedDebtForPayment(debt);
-    setPaymentAmount(debt.minimumPayment.toString()); // Pre-fill with minimum payment
+    setPaymentAmount(debt.minimumPayment.toString()); 
     setPaymentDate(new Date());
     setPaymentNotes("");
     setIsPaymentModalOpen(true);
@@ -258,12 +262,12 @@ export default function DebtManagementPage() {
   
   const handleAddPayment = () => {
     if (!selectedDebtForPayment || !paymentAmount || !paymentDate) {
-      toast({ title: "Error", description: "Payment amount and date are required.", variant: "destructive" });
+      toast({ title: getDebtTranslation(currentLanguage, "toastErrorTitle"), description: getDebtTranslation(currentLanguage, "toastPaymentAmountDateRequired"), variant: "destructive" });
       return;
     }
     const parsedPaymentAmount = parseFloat(paymentAmount);
      if (isNaN(parsedPaymentAmount) || parsedPaymentAmount <= 0) {
-      toast({ title: "Error", description: "Please enter a valid positive payment amount.", variant: "destructive" });
+      toast({ title: getDebtTranslation(currentLanguage, "toastErrorTitle"), description: getDebtTranslation(currentLanguage, "toastValidPositivePayment"), variant: "destructive" });
       return;
     }
 
@@ -287,9 +291,9 @@ export default function DebtManagementPage() {
       return debt;
     }));
     
-    toast({ title: "Payment Added", description: `Payment of ${currencySymbol}${parsedPaymentAmount} for ${selectedDebtForPayment.name} recorded.` });
-    setIsPaymentModalOpen(false); // Close modal
-    setSelectedDebtForPayment(null); // Clear selected debt
+    toast({ title: getDebtTranslation(currentLanguage, "toastPaymentAddedTitle"), description: getDebtTranslation(currentLanguage, "toastPaymentAddedDescription", currencySymbol, parsedPaymentAmount, selectedDebtForPayment.name) });
+    setIsPaymentModalOpen(false); 
+    setSelectedDebtForPayment(null); 
   };
 
   const handleMarkAsPaid = (debtId: string) => {
@@ -297,10 +301,9 @@ export default function DebtManagementPage() {
       const updatedDebts = prevDebts.map(debt =>
         debt.id === debtId ? { ...debt, isPaidOff: true, currentBalance: 0 } : debt
       );
-      // Re-sort to move paid debts to the end or a separate list
       return [...updatedDebts.filter(d => !d.isPaidOff), ...updatedDebts.filter(d => d.isPaidOff)];
     });
-    toast({ title: "Debt Status Updated", description: "Debt marked as fully paid." });
+    toast({ title: getDebtTranslation(currentLanguage, "toastDebtStatusUpdatedTitle"), description: getDebtTranslation(currentLanguage, "toastDebtMarkedAsPaid") });
   };
 
   const activeDebts = useMemo(() => debts.filter(d => !d.isPaidOff), [debts]);
@@ -308,6 +311,11 @@ export default function DebtManagementPage() {
 
   const totalRemainingDebt = useMemo(() => activeDebts.reduce((sum, debt) => sum + debt.currentBalance, 0), [activeDebts]);
   const totalMinimumMonthlyPayment = useMemo(() => activeDebts.filter(d=> d.paymentFrequency === "Monthly").reduce((sum, debt) => sum + debt.minimumPayment, 0), [activeDebts]);
+  const totalMinimumWeeklyPayment = useMemo(() => activeDebts.filter(d=> d.paymentFrequency === "Weekly").reduce((sum, debt) => sum + debt.minimumPayment, 0), [activeDebts]);
+  // Add more for other frequencies if needed for display
+
+  const translatedDebtTypeOptions = useMemo(() => getTranslatedOptions(currentLanguage, 'debtTypes'), [currentLanguage]);
+  const translatedPaymentFrequencyOptions = useMemo(() => getTranslatedOptions(currentLanguage, 'paymentFrequencies'), [currentLanguage]);
 
 
   if (isLoading) {
@@ -318,6 +326,10 @@ export default function DebtManagementPage() {
       </div>
     );
   }
+  
+  const currentPaymentFrequencyDisplay = debtTranslations[currentLanguage]?.paymentFrequencies[paymentFrequency] || debtTranslations.en.paymentFrequencies[paymentFrequency];
+  const currentDebtTypeDisplay = debtTranslations[currentLanguage]?.debtTypes[debtType] || debtTranslations.en.debtTypes[debtType];
+
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
@@ -325,63 +337,83 @@ export default function DebtManagementPage() {
       <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
           <Icons.trendingDown className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
-          Borç Yönetimi
+          {getDebtTranslation(currentLanguage, "pageTitle")}
         </h1>
-        <Link href="/" passHref>
-          <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
-            <Icons.arrowLeft className="mr-2 h-5 w-5" />
-            Back to Dashboard
-          </Button>
-        </Link>
+        <div className="flex items-center space-x-2">
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="rounded-lg shadow-md">
+                        <Icons.languages className="mr-2 h-5 w-5" />
+                        {currentLanguage.toUpperCase()}
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card/90 backdrop-blur-md rounded-xl shadow-lg">
+                    <DropdownMenuItem onClick={() => setCurrentLanguage("en")} className={cn(currentLanguage === "en" && "bg-primary/20 font-semibold")}>
+                        {getDebtTranslation(currentLanguage, "english")}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setCurrentLanguage("tr")} className={cn(currentLanguage === "tr" && "bg-primary/20 font-semibold")}>
+                        {getDebtTranslation(currentLanguage, "turkish")}
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
+            <Link href="/" passHref>
+            <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+                <Icons.arrowLeft className="mr-2 h-5 w-5" />
+                {getDebtTranslation(currentLanguage, "backToDashboard")}
+            </Button>
+            </Link>
+        </div>
       </header>
 
-      {/* Add New Debt Form */}
       <Card className="mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
         <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-semibold">Yeni Borç Ekle</CardTitle>
-          <CardDescription>Yeni bir borç kaydı oluşturun.</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-semibold">{getDebtTranslation(currentLanguage, "addNewDebt")}</CardTitle>
+          <CardDescription>{getDebtTranslation(currentLanguage, "addNewDebtDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
-            <Label htmlFor="debtName">Borç Adı/Açıklaması</Label>
-            <Input id="debtName" value={debtName} onChange={e => setDebtName(e.target.value)} placeholder="Örn: Kredi Kartı Borcu (Akbank)" className="rounded-lg shadow-inner" />
+            <Label htmlFor="debtName">{getDebtTranslation(currentLanguage, "debtNameLabel")}</Label>
+            <Input id="debtName" value={debtName} onChange={e => setDebtName(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "debtNamePlaceholder")} className="rounded-lg shadow-inner" />
           </div>
           <div>
-            <Label htmlFor="lender">Alacaklı/Borç Veren</Label>
-            <Input id="lender" value={lender} onChange={e => setLender(e.target.value)} placeholder="Örn: Akbank" className="rounded-lg shadow-inner" />
+            <Label htmlFor="lender">{getDebtTranslation(currentLanguage, "lenderLabel")}</Label>
+            <Input id="lender" value={lender} onChange={e => setLender(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "lenderPlaceholder")} className="rounded-lg shadow-inner" />
           </div>
           <div>
-            <Label htmlFor="initialAmount">Borcun Başlangıç Tutarı ({currencySymbol})</Label>
+            <Label htmlFor="initialAmount">{getDebtTranslation(currentLanguage, "initialAmountLabel")} ({currencySymbol})</Label>
             <Input id="initialAmount" type="number" value={initialAmount} onChange={e => setInitialAmount(e.target.value)} placeholder="Örn: 5000" className="rounded-lg shadow-inner" />
           </div>
           <div>
-            <Label htmlFor="currentBalanceForm">Mevcut Kalan Bakiye ({currencySymbol})</Label>
-            <Input id="currentBalanceForm" type="number" value={currentBalanceForm} onChange={e => setCurrentBalanceForm(e.target.value)} placeholder="Başlangıç tutarı ile aynı olabilir" className="rounded-lg shadow-inner" />
+            <Label htmlFor="currentBalanceForm">{getDebtTranslation(currentLanguage, "currentBalanceLabel")} ({currencySymbol})</Label>
+            <Input id="currentBalanceForm" type="number" value={currentBalanceForm} onChange={e => setCurrentBalanceForm(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "currentBalancePlaceholder")} className="rounded-lg shadow-inner" />
           </div>
           <div>
-            <Label htmlFor="interestRate">Faiz Oranı (Yıllık %)</Label>
-            <Input id="interestRate" type="number" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder="Örn: 18.5 (Faizsiz ise boş bırakın)" className="rounded-lg shadow-inner" />
+            <Label htmlFor="interestRate">{getDebtTranslation(currentLanguage, "interestRateLabel")}</Label>
+            <Input id="interestRate" type="number" value={interestRate} onChange={e => setInterestRate(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "interestRatePlaceholder")} className="rounded-lg shadow-inner" />
           </div>
           <div>
-            <Label htmlFor="minimumPayment">Min. Aylık / Düzenli Ödeme ({currencySymbol})</Label>
-            <Input id="minimumPayment" type="number" value={minimumPayment} onChange={e => setMinimumPayment(e.target.value)} placeholder="Örn: 250" className="rounded-lg shadow-inner" />
+            <Label htmlFor="minimumPayment">{getDebtTranslation(currentLanguage, "minimumPaymentLabel")} ({currencySymbol})</Label>
+            <Input id="minimumPayment" type="number" value={minimumPayment} onChange={e => setMinimumPayment(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "minimumPaymentPlaceholder")} className="rounded-lg shadow-inner" />
           </div>
           <div>
-            <Label htmlFor="paymentFrequency">Ödeme Sıklığı</Label>
-            <Select value={paymentFrequency} onValueChange={(value) => setPaymentFrequency(value as Debt["paymentFrequency"])}>
-              <SelectTrigger className="rounded-lg shadow-inner"><SelectValue placeholder="Ödeme sıklığı seçin" /></SelectTrigger>
+            <Label htmlFor="paymentFrequency">{getDebtTranslation(currentLanguage, "paymentFrequencyLabel")}</Label>
+            <Select 
+                value={currentPaymentFrequencyDisplay} 
+                onValueChange={(value) => setPaymentFrequency(getPaymentFrequencyKeyFromValue(value, currentLanguage))}
+            >
+              <SelectTrigger className="rounded-lg shadow-inner"><SelectValue placeholder={getDebtTranslation(currentLanguage, "paymentFrequencyPlaceholder")} /></SelectTrigger>
               <SelectContent className="bg-popover rounded-lg shadow-lg">
-                {paymentFrequencyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                {translatedPaymentFrequencyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label htmlFor="nextDueDate">Son Ödeme Tarihi</Label>
+            <Label htmlFor="nextDueDate">{getDebtTranslation(currentLanguage, "nextDueDateLabel")}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-lg shadow-inner", !nextDueDate && "text-muted-foreground")}>
                   <Icons.calendarDays className="mr-2 h-4 w-4" />
-                  {nextDueDate ? format(nextDueDate, "PPP") : <span>Tarih seçin</span>}
+                  {nextDueDate ? format(nextDueDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
@@ -390,21 +422,24 @@ export default function DebtManagementPage() {
             </Popover>
           </div>
           <div>
-            <Label htmlFor="debtType">Borç Türü</Label>
-            <Select value={debtType} onValueChange={(value) => setDebtType(value as Debt["debtType"])}>
-              <SelectTrigger className="rounded-lg shadow-inner"><SelectValue placeholder="Borç türü seçin" /></SelectTrigger>
+            <Label htmlFor="debtType">{getDebtTranslation(currentLanguage, "debtTypeLabel")}</Label>
+            <Select 
+                value={currentDebtTypeDisplay}
+                onValueChange={(value) => setDebtType(getDebtTypeKeyFromValue(value, currentLanguage))}
+            >
+              <SelectTrigger className="rounded-lg shadow-inner"><SelectValue placeholder={getDebtTranslation(currentLanguage, "debtTypePlaceholder")} /></SelectTrigger>
               <SelectContent className="bg-popover rounded-lg shadow-lg">
-                {debtTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                {translatedDebtTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div className="md:col-span-1 lg:col-span-1">
-            <Label htmlFor="startDate">Borç Başlangıç Tarihi (Opsiyonel)</Label>
+            <Label htmlFor="startDate">{getDebtTranslation(currentLanguage, "startDateLabel")}</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-lg shadow-inner", !startDate && "text-muted-foreground")}>
                   <Icons.calendarDays className="mr-2 h-4 w-4" />
-                  {startDate ? format(startDate, "PPP") : <span>Tarih seçin</span>}
+                  {startDate ? format(startDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
@@ -413,46 +448,45 @@ export default function DebtManagementPage() {
             </Popover>
           </div>
           <div className="md:col-span-2 lg:col-span-2">
-            <Label htmlFor="debtNotes">Notlar (Opsiyonel)</Label>
-            <Textarea id="debtNotes" value={debtNotes} onChange={e => setDebtNotes(e.target.value)} placeholder="Borçla ilgili ek detaylar..." className="rounded-lg shadow-inner min-h-[40px]" />
+            <Label htmlFor="debtNotes">{getDebtTranslation(currentLanguage, "notesLabel")}</Label>
+            <Textarea id="debtNotes" value={debtNotes} onChange={e => setDebtNotes(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "debtNotesPlaceholder")} className="rounded-lg shadow-inner min-h-[40px]" />
           </div>
         </CardContent>
         <CardFooter>
           <Button onClick={handleAddDebt} className="rounded-lg shadow-md bg-primary hover:bg-primary/90">
-            <Icons.plusCircle className="mr-2 h-5 w-5" /> Borcu Ekle
+            <Icons.plusCircle className="mr-2 h-5 w-5" /> {getDebtTranslation(currentLanguage, "addDebtButton")}
           </Button>
         </CardFooter>
       </Card>
 
-      {/* Debt List Overview */}
       <Card className="mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
         <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-semibold">Borç Genel Bakışı</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl font-semibold">{getDebtTranslation(currentLanguage, "debtOverview")}</CardTitle>
           <div className="flex flex-col sm:flex-row justify-between text-sm mt-2">
-            <p>Toplam Kalan Borç: <span className="font-bold text-destructive">{currencySymbol}{totalRemainingDebt.toFixed(2)}</span></p>
-            <p>Toplam Min. Aylık Ödeme: <span className="font-bold text-primary">{currencySymbol}{totalMinimumMonthlyPayment.toFixed(2)}</span></p>
+            <p>{getDebtTranslation(currentLanguage, "totalRemainingDebt")}: <span className="font-bold text-destructive">{currencySymbol}{totalRemainingDebt.toFixed(2)}</span></p>
+            <p>{getDebtTranslation(currentLanguage, "totalMinPaymentByType", getDebtTranslation(currentLanguage, "paymentFrequencies")["Monthly"] )}: <span className="font-bold text-primary">{currencySymbol}{totalMinimumMonthlyPayment.toFixed(2)}</span></p>
           </div>
         </CardHeader>
         <CardContent>
-          {activeDebts.length === 0 && <p className="text-muted-foreground text-center py-4">Aktif borcunuz bulunmamaktadır.</p>}
+          {activeDebts.length === 0 && <p className="text-muted-foreground text-center py-4">{getDebtTranslation(currentLanguage, "noActiveDebts")}</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeDebts.map(debt => (
               <Card key={debt.id} className="rounded-xl shadow-md hover:shadow-lg transition-shadow bg-card/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg font-semibold">{debt.name}</CardTitle>
-                  <CardDescription>{debt.lender} - {debt.debtType}</CardDescription>
+                  <CardDescription>{debt.lender} - {debtTranslations[currentLanguage]?.debtTypes[debt.debtType] || debt.debtType}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
-                  <p>Kalan Bakiye: <span className="font-bold text-lg text-destructive">{currencySymbol}{debt.currentBalance.toFixed(2)}</span></p>
+                  <p>{getDebtTranslation(currentLanguage, "remainingBalance")}: <span className="font-bold text-lg text-destructive">{currencySymbol}{debt.currentBalance.toFixed(2)}</span></p>
                   <Progress value={(debt.initialAmount - debt.currentBalance) / debt.initialAmount * 100} className="h-2 my-1" />
-                  <p>Min. Ödeme: {currencySymbol}{debt.minimumPayment.toFixed(2)} ({debt.paymentFrequency})</p>
-                  <p>Son Ödeme Tarihi: <span className={cn(new Date(debt.nextDueDate) < new Date() && "text-destructive font-bold")}>{format(new Date(debt.nextDueDate), "PPP")}</span></p>
-                  {debt.interestRate !== undefined && <p>Faiz Oranı: {debt.interestRate.toFixed(2)}%</p>}
-                  <p className="text-xs text-muted-foreground">Eklenme: {format(new Date(debt.createdAt), "PP")}</p>
+                  <p>{getDebtTranslation(currentLanguage, "minPayment")}: {currencySymbol}{debt.minimumPayment.toFixed(2)} ({debtTranslations[currentLanguage]?.paymentFrequencies[debt.paymentFrequency] || debt.paymentFrequency})</p>
+                  <p>{getDebtTranslation(currentLanguage, "nextDueDateLabel")}: <span className={cn(new Date(debt.nextDueDate) < new Date() && "text-destructive font-bold")}>{format(new Date(debt.nextDueDate), "PPP")}</span></p>
+                  {debt.interestRate !== undefined && <p>{getDebtTranslation(currentLanguage, "interestRate")}: {debt.interestRate.toFixed(2)}%</p>}
+                  <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "addedOn")}: {format(new Date(debt.createdAt), "PP")}</p>
                 </CardContent>
                 <CardFooter className="flex justify-between pt-3">
                   <Button size="sm" variant="outline" onClick={() => handleOpenPaymentModal(debt)} className="rounded-lg shadow-sm hover:bg-primary/10">
-                    <Icons.creditCard className="mr-2 h-4 w-4" /> Ödeme Yap/Görüntüle
+                    <Icons.creditCard className="mr-2 h-4 w-4" /> {getDebtTranslation(currentLanguage, "makeViewPaymentButton")}
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -461,10 +495,13 @@ export default function DebtManagementPage() {
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
-                      <AlertDialogHeader><AlertDialogTitle>Borcu Sil?</AlertDialogTitle><AlertDialogDescription>"{debt.name}" adlı borcu silmek istediğinizden emin misiniz?</AlertDialogDescription></AlertDialogHeader>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>{getDebtTranslation(currentLanguage, "deleteDebtTitle")}</AlertDialogTitle>
+                        <AlertDialogDescription>{getDebtTranslation(currentLanguage, "deleteDebtDescription", debt.name)}</AlertDialogDescription>
+                      </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel className="rounded-lg">İptal</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteDebt(debt.id)} className="bg-destructive hover:bg-destructive/90 rounded-lg">Sil</AlertDialogAction>
+                        <AlertDialogCancel className="rounded-lg">{getDebtTranslation(currentLanguage, "cancel")}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteDebt(debt.id)} className="bg-destructive hover:bg-destructive/90 rounded-lg">{getDebtTranslation(currentLanguage, "delete")}</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
@@ -475,11 +512,10 @@ export default function DebtManagementPage() {
         </CardContent>
       </Card>
       
-      {/* Paid Off Debts */}
        {paidDebts.length > 0 && (
         <Card className="mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
           <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl font-semibold">Ödenmiş Borçlar</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-semibold">{getDebtTranslation(currentLanguage, "paidOffDebts")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -487,13 +523,13 @@ export default function DebtManagementPage() {
                 <Card key={debt.id} className="rounded-xl shadow-md bg-card/60 backdrop-blur-sm opacity-70">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg font-semibold">{debt.name}</CardTitle>
-                    <CardDescription>{debt.lender} - {debt.debtType}</CardDescription>
+                    <CardDescription>{debt.lender} - {debtTranslations[currentLanguage]?.debtTypes[debt.debtType] || debt.debtType}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-1 text-sm">
-                    <p className="text-green-600 dark:text-green-400 font-bold">Tamamen Ödendi</p>
-                    <p>Başlangıç Tutarı: {currencySymbol}{debt.initialAmount.toFixed(2)}</p>
-                     <p className="text-xs text-muted-foreground">Eklenme: {format(new Date(debt.createdAt), "PP")}</p>
-                     {debt.payments.length > 0 && <p className="text-xs text-muted-foreground">Son Ödeme: {format(new Date(debt.payments[debt.payments.length-1].paymentDate), "PP")}</p>}
+                    <p className="text-green-600 dark:text-green-400 font-bold">{getDebtTranslation(currentLanguage, "fullyPaid")}</p>
+                    <p>{getDebtTranslation(currentLanguage, "initialAmount")}: {currencySymbol}{debt.initialAmount.toFixed(2)}</p>
+                     <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "addedOn")}: {format(new Date(debt.createdAt), "PP")}</p>
+                     {debt.payments.length > 0 && <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "lastPayment")}: {format(new Date(debt.payments[debt.payments.length-1].paymentDate), "PP")}</p>}
                   </CardContent>
                 </Card>
               ))}
@@ -502,28 +538,24 @@ export default function DebtManagementPage() {
         </Card>
       )}
 
-
-      {/* Debt Management Strategies and Advice */}
       <Card className="mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
         <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-semibold">Borç Azaltma Stratejileri</CardTitle>
-          <CardDescription>Borçlarınızı daha hızlı ve etkili bir şekilde ödemek için yöntemler.</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-semibold">{getDebtTranslation(currentLanguage, "debtReductionStrategies")}</CardTitle>
+          <CardDescription>{getDebtTranslation(currentLanguage, "debtReductionStrategiesDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold mb-2 text-primary">1. Borç Kartopu Yöntemi (Debt Snowball)</h3>
-            <p className="text-sm text-muted-foreground">En küçük borçtan başlayarak ödeme yapın, diğerlerine minimum ödeme yapmaya devam edin. Bu yöntem motivasyon sağlar. (Detaylı analiz yakında eklenecektir.)</p>
+            <h3 className="text-lg font-semibold mb-2 text-primary">{getDebtTranslation(currentLanguage, "debtSnowballTitle")}</h3>
+            <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "debtSnowballDescription")}</p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold mb-2 text-primary">2. Borç Çığ Yöntemi (Debt Avalanche)</h3>
-            <p className="text-sm text-muted-foreground">En yüksek faizli borçtan başlayarak ödeme yapın. Bu yöntem genellikle uzun vadede daha fazla faiz tasarrufu sağlar. (Detaylı analiz yakında eklenecektir.)</p>
+            <h3 className="text-lg font-semibold mb-2 text-primary">{getDebtTranslation(currentLanguage, "debtAvalancheTitle")}</h3>
+            <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "debtAvalancheDescription")}</p>
           </div>
-          <p className="text-sm text-center py-4 text-muted-foreground">[Kişiselleştirilmiş strateji önerileri ve analiz araçları bu bölümde yer alacaktır.]</p>
+          <p className="text-sm text-center py-4 text-muted-foreground">{getDebtTranslation(currentLanguage, "personalizedStrategiesPlaceholder")}</p>
         </CardContent>
       </Card>
 
-
-      {/* Payment Modal */}
       {selectedDebtForPayment && (
         <Dialog open={isPaymentModalOpen} onOpenChange={(isOpen) => {
             setIsPaymentModalOpen(isOpen);
@@ -531,43 +563,43 @@ export default function DebtManagementPage() {
         }}>
           <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-xl">Ödeme Yap / Geçmişi Görüntüle: {selectedDebtForPayment.name}</DialogTitle>
+              <DialogTitle className="text-xl">{getDebtTranslation(currentLanguage, "paymentModalTitle", selectedDebtForPayment.name)}</DialogTitle>
               <DialogDescription>
-                Kalan Bakiye: {currencySymbol}{selectedDebtForPayment.currentBalance.toFixed(2)}
+                {getDebtTranslation(currentLanguage, "remainingBalance")}: {currencySymbol}{selectedDebtForPayment.currentBalance.toFixed(2)}
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-md">Yeni Ödeme Ekle</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-md">{getDebtTranslation(currentLanguage, "addPaymentCardTitle")}</CardTitle></CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <Label htmlFor="paymentAmount">Ödeme Tutarı ({currencySymbol})</Label>
+                    <Label htmlFor="paymentAmount">{getDebtTranslation(currentLanguage, "paymentAmountLabel")} ({currencySymbol})</Label>
                     <Input id="paymentAmount" type="number" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} className="rounded-lg shadow-inner" />
                   </div>
                   <div>
-                    <Label htmlFor="paymentDate">Ödeme Tarihi</Label>
+                    <Label htmlFor="paymentDate">{getDebtTranslation(currentLanguage, "paymentDateLabel")}</Label>
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" className={cn("w-full justify-start text-left font-normal rounded-lg shadow-inner", !paymentDate && "text-muted-foreground")}>
                           <Icons.calendarDays className="mr-2 h-4 w-4" />
-                          {paymentDate ? format(paymentDate, "PPP") : <span>Tarih seçin</span>}
+                          {paymentDate ? format(paymentDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg"><Calendar mode="single" selected={paymentDate} onSelect={setPaymentDate} initialFocus /></PopoverContent>
                     </Popover>
                   </div>
                   <div>
-                    <Label htmlFor="paymentNotes">Ödeme Notları (Opsiyonel)</Label>
-                    <Textarea id="paymentNotes" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} placeholder="Ödeme ile ilgili notlar..." className="rounded-lg shadow-inner min-h-[60px]" />
+                    <Label htmlFor="paymentNotes">{getDebtTranslation(currentLanguage, "paymentNotesLabel")}</Label>
+                    <Textarea id="paymentNotes" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "paymentNotesPlaceholder")} className="rounded-lg shadow-inner min-h-[60px]" />
                   </div>
-                  <Button onClick={handleAddPayment} className="w-full rounded-lg shadow-md bg-primary hover:bg-primary/90"><Icons.checkCircle className="mr-2 h-5 w-5" /> Ödemeyi Kaydet</Button>
+                  <Button onClick={handleAddPayment} className="w-full rounded-lg shadow-md bg-primary hover:bg-primary/90"><Icons.checkCircle className="mr-2 h-5 w-5" /> {getDebtTranslation(currentLanguage, "savePaymentButton")}</Button>
                 </CardContent>
               </Card>
               
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-md">Ödeme Geçmişi</CardTitle></CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-md">{getDebtTranslation(currentLanguage, "paymentHistoryCardTitle")}</CardTitle></CardHeader>
                 <CardContent>
-                  {selectedDebtForPayment.payments.length === 0 ? <p className="text-sm text-muted-foreground">Bu borç için henüz ödeme yapılmamış.</p> : (
+                  {selectedDebtForPayment.payments.length === 0 ? <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "noPaymentsYet")}</p> : (
                     <ul className="space-y-2 text-sm">
                       {selectedDebtForPayment.payments.slice().reverse().map(p => (
                         <li key={p.id} className="flex justify-between items-center border-b pb-1 last:border-b-0">
@@ -583,27 +615,24 @@ export default function DebtManagementPage() {
             <DialogFooter className="sm:justify-between">
               {!selectedDebtForPayment.isPaidOff && selectedDebtForPayment.currentBalance === 0 && (
                 <Button variant="outline" onClick={() => { handleMarkAsPaid(selectedDebtForPayment.id); setIsPaymentModalOpen(false); }} className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md">
-                  <Icons.checkCircle className="mr-2 h-5 w-5" /> Tamamen Ödendi Olarak İşaretle
+                  <Icons.checkCircle className="mr-2 h-5 w-5" /> {getDebtTranslation(currentLanguage, "markAsFullyPaidButton")}
                 </Button>
               )}
               <DialogClose asChild>
-                <Button type="button" variant="secondary" className="rounded-lg shadow-md">Kapat</Button>
+                <Button type="button" variant="secondary" className="rounded-lg shadow-md">{getDebtTranslation(currentLanguage, "closeButton")}</Button>
               </DialogClose>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
 
-
       <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
         <div className="container mx-auto">
           <p className="text-sm text-foreground">
-            © {new Date().getFullYear()} PocketLedger Pro. Tüm hakları saklıdır.
+            {getDebtTranslation(currentLanguage, "footerText", new Date().getFullYear())}
           </p>
         </div>
       </footer>
     </div>
   );
 }
-
-    
