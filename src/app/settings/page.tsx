@@ -310,31 +310,6 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
-
-      <Card className="mb-6 sm:mb-8 rounded-xl shadow-lg bg-card/80 backdrop-blur-md">
-        <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Future Settings Ideas</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Enhancements that could be added to this page in the future.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm text-card-foreground">
-          <p><strong>Data Management:</strong></p>
-          <ul className="list-disc list-inside pl-4 space-y-1">
-            <li>Export all data (transactions, notes, debts) to CSV/JSON.</li>
-            <li>Import data from CSV/JSON (requires careful validation).</li>
-          </ul>
-          <p><strong>Customization:</strong></p>
-          <ul className="list-disc list-inside pl-4 space-y-1">
-            <li>Set a global default currency (currently managed on main page).</li>
-            <li>More theme options (e.g., accent color picker).</li>
-          </ul>
-           <p><strong>Advanced:</strong></p>
-          <ul className="list-disc list-inside pl-4 space-y-1">
-            <li>Data integrity check/validation tool.</li>
-          </ul>
-        </CardContent>
-      </Card>
       
       <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
         <div className="container mx-auto">

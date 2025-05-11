@@ -857,25 +857,25 @@ export default function Home() {
             <p className="text-xs text-muted-foreground/80">
               (Tip: Press Shift + S + D to reset data without confirmation)
             </p>
-            <div className="w-full border-t border-border/30 pt-6 mt-2">
-              <div className="flex flex-wrap justify-center space-x-2 sm:space-x-4 mb-4">
-                  <Link href="/about" passHref>
-                      <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-1 sm:px-2">
-                      About (English)
-                      </Button>
-                  </Link>
-                  <Link href="/about-tr" passHref>
-                      <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-1 sm:px-2">
-                      Hakkında (Türkçe)
-                      </Button>
-                  </Link>
-                  <Link href="/about-es" passHref>
-                      <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-1 sm:px-2">
-                      Acerca de (Español)
-                      </Button>
-                  </Link>
+            <div className="w-full border-t border-gray-300 pt-6 mt-2 bg-white-50 shadow-md rounded-lg">
+              <div className="flex flex-wrap justify-center space-x-4 mb-4">
+                <Link href="/about" passHref>
+                  <Button variant="link" className="text-blue-600 hover:underline text-sm px-3 py-2 transition duration-300 ease-in-out transform hover:scale-105">
+                    About (English)
+                  </Button>
+                </Link>
+                <Link href="/about-tr" passHref>
+                  <Button variant="link" className="text-blue-600 hover:underline text-sm px-3 py-2 transition duration-300 ease-in-out transform hover:scale-105">
+                    Hakkında (Türkçe)
+                  </Button>
+                </Link>
+                <Link href="/about-es" passHref>
+                  <Button variant="link" className="text-blue-600 hover:underline text-sm px-3 py-2 transition duration-300 ease-in-out transform hover:scale-105">
+                    Acerca de (Español)
+                  </Button>
+                </Link>
               </div>
-              <p className="text-sm text-foreground">
+              <p className="text-sm text-gray-600 text-center">
                 © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
               </p>
             </div>
