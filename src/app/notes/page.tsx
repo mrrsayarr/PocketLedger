@@ -46,6 +46,10 @@ import {
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowDownUp } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+
 
 type Note = {
   id: string;
@@ -54,6 +58,7 @@ type Note = {
   assetType?: string;
   quantity?: number;
   purchasePrice?: number;
+  purchaseDate?: Date;
   createdAt: Date;
 };
 
@@ -73,7 +78,7 @@ const currencies: Currency[] = [
 
 const assetCategories = ["Cryptocurrency", "Stocks", "Bonds", "Real Estate", "Commodities", "Forex", "Other"];
 
-type SortableKeys = keyof Pick<Note, 'title' | 'assetType' | 'quantity' | 'purchasePrice' | 'createdAt'>;
+type SortableKeys = keyof Pick<Note, 'title' | 'assetType' | 'quantity' | 'purchasePrice' | 'createdAt' | 'purchaseDate'>;
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -82,6 +87,7 @@ export default function NotesPage() {
   const [newNoteAssetType, setNewNoteAssetType] = useState("");
   const [newNoteQuantity, setNewNoteQuantity] = useState<number | undefined>(undefined);
   const [newNotePurchasePrice, setNewNotePurchasePrice] = useState<number | undefined>(undefined);
+  const [newNotePurchaseDate, setNewNotePurchaseDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [displayCurrencySymbol, setDisplayCurrencySymbol] = useState("₺");
   const { toast } = useToast();
@@ -115,6 +121,7 @@ export default function NotesPage() {
                 JSON.parse(storedNotes).map((note: any) => ({
                 ...note,
                 createdAt: new Date(note.createdAt),
+                purchaseDate: note.purchaseDate ? new Date(note.purchaseDate) : undefined,
                 }))
             );
             } catch (error) {
@@ -149,6 +156,7 @@ export default function NotesPage() {
       assetType: newNoteAssetType.trim() || undefined,
       quantity: newNoteQuantity,
       purchasePrice: newNotePurchasePrice,
+      purchaseDate: newNotePurchaseDate,
       createdAt: new Date(),
     };
 
@@ -158,6 +166,7 @@ export default function NotesPage() {
     setNewNoteAssetType("");
     setNewNoteQuantity(undefined);
     setNewNotePurchasePrice(undefined);
+    setNewNotePurchaseDate(undefined);
     toast({
       title: "Note Added",
       description: "Your financial note has been successfully added.",
@@ -189,9 +198,23 @@ export default function NotesPage() {
         const valB = b[sortConfig.key];
 
         if (valA === undefined && valB === undefined) return 0;
-        if (valA === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
-        if (valB === undefined) return sortConfig.direction === 'ascending' ? 1 : -1;
+        if (valA === undefined) return sortConfig.direction === 'ascending' ? -1 : 1; // or 1 / -1 depending on how you want to sort undefined
+        if (valB === undefined) return sortConfig.direction === 'ascending' ? 1 : -1; // or -1 / 1
         
+        // For date fields, compare timestamps
+        if (sortConfig.key === 'createdAt' || sortConfig.key === 'purchaseDate') {
+            const dateA = new Date(valA as Date).getTime();
+            const dateB = new Date(valB as Date).getTime();
+            if (dateA < dateB) {
+              return sortConfig.direction === 'ascending' ? -1 : 1;
+            }
+            if (dateA > dateB) {
+              return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+            return 0;
+        }
+
+
         if (valA! < valB!) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
@@ -297,6 +320,33 @@ export default function NotesPage() {
                 className="rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary"
               />
             </div>
+            <div>
+                <Label htmlFor="note-purchase-date" className="font-medium text-card-foreground">Purchase Date (Optional)</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full justify-start text-left font-normal rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary h-10",
+                                !newNotePurchaseDate && "text-muted-foreground"
+                            )}
+                            id="note-purchase-date"
+                        >
+                            <Icons.calendarDays className="mr-2 h-4 w-4" />
+                            {newNotePurchaseDate ? format(newNotePurchaseDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+                        <Calendar
+                            mode="single"
+                            selected={newNotePurchaseDate}
+                            onSelect={setNewNotePurchaseDate}
+                            initialFocus
+                            className="bg-card/95 rounded-md"
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
           </div>
 
           <div>
@@ -342,7 +392,7 @@ export default function NotesPage() {
                   <div>
                     <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">{note.title}</CardTitle>
                     <CardDescription className="text-xs text-muted-foreground">
-                      {format(new Date(note.createdAt), "PPP p")}
+                      Created: {format(new Date(note.createdAt), "PPP p")}
                     </CardDescription>
                   </div>
                   <AlertDialog>
@@ -376,13 +426,16 @@ export default function NotesPage() {
                       <span className="font-medium">Asset Type:</span> {note.assetType}
                     </p>
                   )}
-                  {(note.quantity !== undefined || note.purchasePrice !== undefined) && (
+                  {(note.quantity !== undefined || note.purchasePrice !== undefined || note.purchaseDate) && (
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground">
                       {note.quantity !== undefined && (
                       <p><span className="font-medium">Quantity:</span> {note.quantity}</p>
                       )}
                       {note.purchasePrice !== undefined && (
                       <p><span className="font-medium">Purchase Price:</span> {displayCurrencySymbol}{note.purchasePrice.toFixed(2)}</p>
+                      )}
+                      {note.purchaseDate && (
+                      <p><span className="font-medium">Purchase Date:</span> {format(new Date(note.purchaseDate), "PPP")}</p>
                       )}
                   </div>
                   )}
@@ -411,8 +464,11 @@ export default function NotesPage() {
                     <TableHead onClick={() => requestSort('purchasePrice')} className="text-right cursor-pointer hover:bg-muted/50">
                         <div className="flex items-center justify-end">Price ({displayCurrencySymbol}) {getSortIndicator('purchasePrice')}</div>
                     </TableHead>
+                     <TableHead onClick={() => requestSort('purchaseDate')} className="cursor-pointer hover:bg-muted/50">
+                        <div className="flex items-center">Purchase Date {getSortIndicator('purchaseDate')}</div>
+                    </TableHead>
                     <TableHead onClick={() => requestSort('createdAt')} className="cursor-pointer hover:bg-muted/50">
-                        <div className="flex items-center">Date {getSortIndicator('createdAt')}</div>
+                        <div className="flex items-center">Created Date {getSortIndicator('createdAt')}</div>
                     </TableHead>
                     <TableHead>Content</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
@@ -425,13 +481,14 @@ export default function NotesPage() {
                         <TableCell>{note.assetType || "-"}</TableCell>
                         <TableCell className="text-right">{note.quantity !== undefined ? note.quantity : "-"}</TableCell>
                         <TableCell className="text-right">{note.purchasePrice !== undefined ? `${displayCurrencySymbol}${note.purchasePrice.toFixed(2)}` : "-"}</TableCell>
+                        <TableCell>{note.purchaseDate ? format(new Date(note.purchaseDate), "PP") : "-"}</TableCell>
                         <TableCell>{format(new Date(note.createdAt), "PP")}</TableCell>
                         <TableCell>
                         <Tooltip delayDuration={100}>
                             <TooltipTrigger asChild>
                             <p className="max-w-[150px] truncate cursor-default">{note.content}</p>
                             </TooltipTrigger>
-                            <TooltipContent side="top" align="start" className="max-w-sm bg-popover text-popover-foreground border shadow-lg rounded-md p-2 text-sm">
+                            <TooltipContent side="top" align="start" className="max-w-sm bg-popover text-popover-foreground border shadow-lg rounded-md p-2 text-sm z-50">
                             <p className="whitespace-pre-wrap">{note.content}</p>
                             </TooltipContent>
                         </Tooltip>
