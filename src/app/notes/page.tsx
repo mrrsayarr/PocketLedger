@@ -28,21 +28,33 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 
 type Note = {
   id: string;
   title: string;
   content: string;
-  assetType?: string; // e.g., Bitcoin, Gold, Stock Name
+  assetType?: string; 
   quantity?: number;
   purchasePrice?: number;
   createdAt: Date;
 };
 
+interface Currency {
+  symbol: string;
+  code: string;
+  name: string;
+}
+
+const currencies: Currency[] = [
+  { symbol: "₺", code: "TRY", name: "Turkish Lira" },
+  { symbol: "$", code: "USD", name: "US Dollar" },
+  { symbol: "€", code: "EUR", name: "Euro" },
+  { symbol: "£", code: "GBP", name: "British Pound" },
+  { symbol: "¥", code: "JPY", name: "Japanese Yen" },
+];
+
 const assetCategories = ["Cryptocurrency", "Stocks", "Bonds", "Real Estate", "Commodities", "Forex", "Other"];
-const displayCurrencySymbol = "₺"; // Hardcoded to TL symbol
 
 export default function NotesPage() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -52,37 +64,46 @@ export default function NotesPage() {
   const [newNoteQuantity, setNewNoteQuantity] = useState<number | undefined>(undefined);
   const [newNotePurchasePrice, setNewNotePurchasePrice] = useState<number | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [displayCurrencySymbol, setDisplayCurrencySymbol] = useState("₺");
   const { toast } = useToast();
 
   useEffect(() => {
-    // Theme synchronization
-    const storedDarkMode = localStorage.getItem('darkMode');
-    if (typeof window !== "undefined") { // Ensure this runs client-side
+    if (typeof window !== "undefined") {
+        // Theme synchronization
+        const storedDarkMode = localStorage.getItem('darkMode');
         if (storedDarkMode === 'false') { 
             document.documentElement.classList.remove('dark');
         } else { 
-            // Default to dark if 'true' or null (not set)
             document.documentElement.classList.add('dark');
         }
-    }
 
-    // Existing notes loading logic
-    if (typeof window !== "undefined") {
-      const storedNotes = localStorage.getItem("financialNotes");
-      if (storedNotes) {
-        try {
-          setNotes(
-            JSON.parse(storedNotes).map((note: any) => ({
-              ...note,
-              createdAt: new Date(note.createdAt),
-            }))
-          );
-        } catch (error) {
-          console.error("Failed to parse notes from localStorage:", error);
-          setNotes([]); 
+        // Currency symbol
+        const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
+        if (storedCurrencyCode) {
+            const foundCurrency = currencies.find(c => c.code === storedCurrencyCode);
+            if (foundCurrency) {
+            setDisplayCurrencySymbol(foundCurrency.symbol);
+            }
+        } else {
+            setDisplayCurrencySymbol(currencies.find(c => c.code === 'TRY')?.symbol || '₺');
         }
-      }
-      setIsLoading(false);
+
+        // Load notes
+        const storedNotes = localStorage.getItem("financialNotes");
+        if (storedNotes) {
+            try {
+            setNotes(
+                JSON.parse(storedNotes).map((note: any) => ({
+                ...note,
+                createdAt: new Date(note.createdAt),
+                }))
+            );
+            } catch (error) {
+            console.error("Failed to parse notes from localStorage:", error);
+            setNotes([]); 
+            }
+        }
+        setIsLoading(false);
     }
   }, []);
 
@@ -207,7 +228,7 @@ export default function NotesPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="note-purchase-price" className="font-medium text-card-foreground">Purchase Price (Optional)</Label>
+              <Label htmlFor="note-purchase-price" className="font-medium text-card-foreground">Purchase Price ({displayCurrencySymbol}) (Optional)</Label>
               <Input
                 id="note-purchase-price"
                 type="number"
@@ -315,3 +336,4 @@ export default function NotesPage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -54,7 +55,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Tooltip,
@@ -64,6 +64,14 @@ import {
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import SlideToConfirmButton from '@/components/ui/slide-to-confirm-button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 // Define type for a transaction
@@ -75,6 +83,21 @@ type Transaction = {
   type: "income" | "expense";
   notes?: string;
 };
+
+interface Currency {
+  symbol: string;
+  code: string;
+  name: string;
+}
+
+const currencies: Currency[] = [
+  { symbol: "₺", code: "TRY", name: "Turkish Lira" },
+  { symbol: "$", code: "USD", name: "US Dollar" },
+  { symbol: "€", code: "EUR", name: "Euro" },
+  { symbol: "£", code: "GBP", name: "British Pound" },
+  { symbol: "¥", code: "JPY", name: "Japanese Yen" },
+];
+
 
 // Predefined categories
 const categories = [
@@ -93,7 +116,7 @@ const categories = [
 ];
 
 
-const COLORS = [
+const CHART_COLORS = [
   "#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#33b8ff",
   "#a4de6c", "#d0ed57", "#ffc658", "#ff7f50", "#e066ff", "#6a5acd",
   "#4CAF50", "#FFEB3B", "#9C27B0", "#795548", "#607D8B", "#F44336",
@@ -101,7 +124,7 @@ const COLORS = [
   "#FFC107", "#FF9800", "#FF5722", "#9E9E9E", "#3F51B5",
 ];
 
-const CustomTooltip = ({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload, currencySymbol }: { active?: boolean; payload?: any[]; currencySymbol: string; }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const name = data.name;
@@ -114,21 +137,19 @@ const CustomTooltip = ({ active, payload }: any) => {
       if (percentScaled === 0) {
         displayPercentText = "0.00";
       } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00" && percentScaled !== 0) {
-        displayPercentText = percentScaled.toFixed(Math.max(2, -Math.floor(Math.log10(percentScaled)) + 1 )); // Show more precision for small non-zero values
+        displayPercentText = percentScaled.toFixed(Math.max(2, -Math.floor(Math.log10(percentScaled)) + 1 )); 
       } else {
         displayPercentText = percentScaled.toFixed(2);
       }
     } else {
-      displayPercentText = 'N/A'; // Fallback if percent is not a valid number
+      displayPercentText = 'N/A'; 
     }
     
-    const displayCurrencySymbol = "₺";
-
     return (
       <div className="bg-background/80 backdrop-blur-sm p-3 border border-border rounded-lg shadow-xl text-sm">
         <p className="font-bold text-foreground mb-1">{name}</p>
         <p className="text-muted-foreground">
-          Amount: <span className="font-medium text-foreground">{displayCurrencySymbol}{typeof value === 'number' ? value.toFixed(2) : 'N/A'}</span>
+          Amount: <span className="font-medium text-foreground">{currencySymbol}{typeof value === 'number' ? value.toFixed(2) : 'N/A'}</span>
         </p>
         <p className="text-muted-foreground">
           Percentage: <span className="font-medium text-foreground">{displayPercentText}%</span>
@@ -150,13 +171,13 @@ export default function Home() {
   const [notes, setNotes] = useState<string>("");
   
   const [darkMode, setDarkMode] = useState(false); 
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
 
   const [currentBalance, setCurrentBalance] = useState(0);
   const [totalIncome, setTotalIncome] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [spendingData, setSpendingData] = useState<{ name: string; value: number }[]>([]);
   const { toast } = useToast();
-  const displayCurrencySymbol = "₺";
 
   const prevBalanceRef = useRef<number>(0);
   const [showNegativeBalanceAlert, setShowNegativeBalanceAlert] = useState(false);
@@ -198,14 +219,23 @@ export default function Home() {
   
  useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Dark mode initialization
       const storedDarkMode = localStorage.getItem("darkMode");
-      // Default to light mode if nothing is stored or if it's explicitly set to 'false'
       const initialDarkMode = storedDarkMode === 'true'; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
       } else {
         document.documentElement.classList.remove("dark");
+      }
+
+      // Currency initialization
+      const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
+      if (storedCurrencyCode) {
+        const foundCurrency = currencies.find(c => c.code === storedCurrencyCode);
+        if (foundCurrency) {
+          setSelectedCurrency(foundCurrency);
+        }
       }
     }
     loadInitialData();
@@ -222,6 +252,12 @@ export default function Home() {
       }
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("selectedCurrencyCode", selectedCurrency.code);
+    }
+  }, [selectedCurrency]);
 
   useEffect(() => {
     if (currentBalance < 0 && prevBalanceRef.current >= 0) {
@@ -305,6 +341,14 @@ export default function Home() {
     setDarkMode((prevMode) => !prevMode);
   };
 
+  const handleCurrencyChange = (currency: Currency) => {
+    setSelectedCurrency(currency);
+    toast({
+      title: "Currency Updated",
+      description: `Display currency changed to ${currency.name} (${currency.code}).`,
+    });
+  };
+
   const handleResetData = useCallback(async () => {
     await resetAllDataInDb();
     toast({
@@ -322,13 +366,10 @@ export default function Home() {
             pressedKeys.add(event.key.toLowerCase());
         }
 
-        // Check for Shift + S + D
         if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
-             // Ensure the last key pressed is S or D to complete the combo
             if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
                 event.preventDefault(); 
                 handleResetData(); 
-                // Clear the pressed keys after action
                 pressedKeys.delete('s');
                 pressedKeys.delete('d');
             }
@@ -350,14 +391,12 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow only numbers (integers)
     if (/^\d*$/.test(value)) {
       setAmount(value);
     }
   };
 
   const handleAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent '.', ',', 'e', '+', '-'
     if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) {
       e.preventDefault();
     }
@@ -390,6 +429,30 @@ export default function Home() {
                 My Notes
               </Button>
             </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
+                  <Icons.coins className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  {selectedCurrency.code}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-card/90 backdrop-blur-md rounded-xl shadow-lg">
+                <DropdownMenuLabel className="text-card-foreground">Select Currency</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {currencies.map((currency) => (
+                  <DropdownMenuItem
+                    key={currency.code}
+                    onClick={() => handleCurrencyChange(currency)}
+                    className={cn(
+                      "text-card-foreground hover:bg-primary/10",
+                      selectedCurrency.code === currency.code && "bg-primary/20 font-semibold"
+                    )}
+                  >
+                    {currency.symbol} {currency.name} ({currency.code})
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex items-center space-x-1 sm:space-x-2">
               <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
                 {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
@@ -411,7 +474,7 @@ export default function Home() {
               <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Current Balance</CardTitle>
             </CardHeader>
             <CardContent className="text-xl sm:text-3xl font-bold text-card-foreground">
-              {displayCurrencySymbol}{currentBalance.toFixed(2)}
+              {selectedCurrency.symbol}{currentBalance.toFixed(2)}
             </CardContent>
           </Card>
           <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
@@ -419,7 +482,7 @@ export default function Home() {
               <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Income</CardTitle>
             </CardHeader>
             <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--income))]">
-              {displayCurrencySymbol}{totalIncome.toFixed(2)}
+              {selectedCurrency.symbol}{totalIncome.toFixed(2)}
             </CardContent>
           </Card>
           <Card className="rounded-xl shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out bg-card/80 backdrop-blur-md">
@@ -427,7 +490,7 @@ export default function Home() {
               <CardTitle className="text-lg sm:text-xl font-semibold text-card-foreground">Total Expenses</CardTitle>
             </CardHeader>
             <CardContent className="text-xl sm:text-3xl font-bold text-[hsl(var(--expense))]">
-              {displayCurrencySymbol}{totalExpenses.toFixed(2)}
+              {selectedCurrency.symbol}{totalExpenses.toFixed(2)}
             </CardContent>
           </Card>
         </section>
@@ -562,7 +625,7 @@ export default function Home() {
                       )}
                     >
                       {transaction.type === "income" ? "+" : "-"}
-                      {displayCurrencySymbol}{transaction.amount.toFixed(2)}
+                      {selectedCurrency.symbol}{transaction.amount.toFixed(2)}
                     </TableCell>
                     <TableCell className="text-sm">
                       <span
@@ -613,7 +676,7 @@ export default function Home() {
                             <Icons.trash className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]"> {/* Ensure z-index is high enough */}
+                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
                           <AlertDialogHeader>
                             <AlertDialogTitle className="text-card-foreground">Delete Transaction?</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground">
@@ -642,7 +705,7 @@ export default function Home() {
         {spendingData.length > 0 && (
           <Card className="h-[450px] sm:h-[550px] rounded-xl shadow-lg mb-6 sm:mb-8 bg-card/80 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Spending by Category ({displayCurrencySymbol})</CardTitle>
+              <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Spending by Category ({selectedCurrency.symbol})</CardTitle>
             </CardHeader>
             <CardContent className="h-[calc(100%-5rem)] pt-4">
               <ResponsiveContainer width="100%" height="100%">
@@ -706,14 +769,14 @@ export default function Home() {
                     {spendingData.map((entry, index) => (
                       <Cell
                         key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
+                        fill={CHART_COLORS[index % CHART_COLORS.length]}
                         className="focus:outline-none transition-opacity duration-200 hover:opacity-70 cursor-pointer"
                         tabIndex={0} 
-                        aria-label={`${entry.name}: ${displayCurrencySymbol}${entry.value.toFixed(2)}`}
+                        aria-label={`${entry.name}: ${selectedCurrency.symbol}${entry.value.toFixed(2)}`}
                       />
                     ))}
                   </Pie>
-                  <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
+                  <RechartsTooltip content={<CustomTooltip currencySymbol={selectedCurrency.symbol} />} cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }} />
                   <Legend
                     layout="horizontal"
                     verticalAlign="bottom"
@@ -775,4 +838,5 @@ export default function Home() {
     </TooltipProvider>
   );
 }
+
 

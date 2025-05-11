@@ -1,3 +1,4 @@
+
 # PocketLedger Pro - Smart Finance Tracker
 
 PocketLedger Pro is a modern, client-side personal finance management application designed to help you track your income and expenses effortlessly. Gain clear insights into your financial health, visualize spending patterns, and manage your finances effectively, all while keeping your data securely stored locally on your device.
@@ -8,10 +9,11 @@ PocketLedger Pro is a modern, client-side personal finance management applicatio
 *   **Dashboard Overview:** Get a quick summary of your current balance, total income, and total expenses.
 *   **Spending Analysis:** Visualize your spending habits with an interactive pie chart categorized by expenses.
 *   **Financial Notes:** Keep detailed notes about your investments, assets, or other financial activities, including asset type, quantity, and purchase price.
-*   **Local Data Storage:** All your financial data is stored securely in your browser's IndexedDB (for transactions) and localStorage (for notes and preferences), ensuring privacy and offline access. No data is sent to any external server.
+*   **Currency Selection:** Choose your preferred display currency (TRY, USD, EUR, GBP, JPY). Your preference is saved locally.
+*   **Local Data Storage:** All your financial data is stored securely in your browser's IndexedDB (for transactions) and localStorage (for notes, theme, and currency preference), ensuring privacy and offline access. No data is sent to any external server.
 *   **Dark/Light Mode:** Choose your preferred theme for comfortable viewing.
 *   **Responsive Design:** Access and manage your finances on any device.
-*   **Data Reset:** Option to securely reset all application data.
+*   **Data Reset:** Option to securely reset all application data using a slide-to-confirm button or a keyboard shortcut.
 *   **Multi-language About Page:** Information about the project available in English, Turkish, and Spanish.
 *   **Modern Tech Stack:** Built with Next.js (App Router), React, TypeScript, Tailwind CSS, and ShadCN UI components.
 
@@ -21,7 +23,7 @@ PocketLedger Pro is a modern, client-side personal finance management applicatio
 *   **Language:** TypeScript
 *   **UI Components:** ShadCN UI
 *   **Styling:** Tailwind CSS
-*   **Client-side Database:** IndexedDB (for transactions), localStorage (for notes and theme)
+*   **Client-side Database:** IndexedDB (for transactions), localStorage (for notes, theme, currency)
 *   **Charting:** Recharts
 *   **Form Management:** React Hook Form
 *   **Toasting/Notifications:** Custom toast implementation
@@ -92,7 +94,7 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
 
 ### Main Dashboard (Home Page)
 
-*   **Overview Cards:** At the top, you'll find cards displaying your **Current Balance**, **Total Income**, and **Total Expenses**.
+*   **Overview Cards:** At the top, you'll find cards displaying your **Current Balance**, **Total Income**, and **Total Expenses** in your selected currency.
 *   **Add New Transaction:**
     *   **Date:** Select the transaction date using the calendar.
     *   **Category:** Choose an appropriate category from the dropdown list.
@@ -102,15 +104,17 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
     *   Click "Add Transaction" to save.
 
 *   **Transaction History:** A table displaying all your recorded transactions.
-    *   Each row shows the date, category, amount, type, and notes.
+    *   Each row shows the date, category, amount (in selected currency), type, and notes.
     *   You can delete a transaction by clicking the trash icon in the "Actions" column. A confirmation dialog will appear.
 
-*   **Spending by Category:** A pie chart visualizing your expenses by category.
+*   **Spending by Category:** A pie chart visualizing your expenses by category, with amounts shown in your selected currency.
     *   Hover over a slice to see the category name, amount, and percentage of total spending.
     *   The legend below the chart lists the categories.
 
-*   **Dark/Light Mode Toggle:** Switch between dark and light themes using the toggle in the header. Your preference is saved locally.
-*   **My Notes Button:** Navigate to the Financial Notes page.
+*   **Header Controls:**
+    *   **My Notes Button:** Navigate to the Financial Notes page.
+    *   **Currency Selector:** Click the currency code (e.g., TRY) to open a dropdown and select your preferred display currency from a list of popular options (TRY, USD, EUR, GBP, JPY). Your choice is saved locally.
+    *   **Dark/Light Mode Toggle:** Switch between dark and light themes using the toggle. Your preference is saved locally.
 
 ### Financial Notes Page (`/notes`)
 
@@ -118,21 +122,21 @@ Follow these instructions to get a local copy of PocketLedger Pro up and running
     *   **Note Title:** Enter a title for your note (e.g., "Bitcoin Purchase", "Gold Investment").
     *   **Asset Type (Optional):** Select an asset category (e.g., Cryptocurrency, Stocks) or enter a custom one.
     *   **Quantity (Optional):** Enter the quantity of the asset.
-    *   **Purchase Price (Optional):** Enter the purchase price of the asset. The currency symbol is hardcoded (₺).
+    *   **Purchase Price (Optional):** Enter the purchase price of the asset. The currency symbol displayed next to the input field will match your globally selected currency.
     *   **Note Content:** Provide details about the asset, purchase date, strategy, etc.
     *   Click "Add Note" to save.
 
-*   **Saved Notes:** Your notes are displayed in a list format, showing title, creation date, asset details (if provided), and content.
+*   **Saved Notes:** Your notes are displayed in a list format, showing title, creation date, asset details (if provided), and content. Purchase prices are displayed with the currently selected currency symbol.
     *   You can delete a note using the trash icon next to each note, with a confirmation step.
 
 *   **Back to Dashboard Button:** Return to the main dashboard
 
 ### Data Management
 
-*   **Data Storage:** All data is stored locally in your browser. Transactions are in IndexedDB, while notes and theme preferences are in localStorage.
+*   **Data Storage:** All data is stored locally in your browser. Transactions are in IndexedDB, while notes, theme preferences, and currency preferences are in localStorage.
 *   **Data Privacy:** Your data does not leave your device and is not accessible by any external servers or other websites.
 *   **Data Reset:**
-    *   **Footer Button:** Click the "Reset All Data" button in the footer. A confirmation dialog will appear before deleting all transactions and notes.
+    *   **Footer Button:** Use the "Erase All Application Data" slide-to-confirm button in the footer. Slide the control to the right to confirm and delete all transactions and notes.
     *   **Shortcut:** Press `Shift + S + D` to reset all data without a confirmation dialog (use with caution!). A small tip about this shortcut is displayed near the reset button.
 
 ### About Pages
@@ -166,3 +170,4 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 ---
 
 Thank you for using PocketLedger Pro! We hope it helps you manage your finances more effectively.
+
