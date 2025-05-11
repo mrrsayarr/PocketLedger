@@ -1,5 +1,5 @@
 
-import {ArrowLeft, ArrowRight, Check, ChevronsUpDown, Circle, Copy, Edit, ExternalLink, File, FileText, HelpCircle, Home, Loader2, Mail, MessageSquare, Moon, Plus, PlusCircle, Search, Server, Settings, Share2, Shield, Sun, Trash, User, Workflow, Wallet, Notebook, RefreshCw, X, Info, AlertTriangle, Coins, ArrowUp, ArrowDown, CalendarDays, TrendingDown, CreditCard, CheckCircle, Languages} from 'lucide-react';
+import {ArrowLeft, ArrowRight, Check, ChevronsUpDown, Circle, Copy, Edit, ExternalLink, File, FileText, HelpCircle, Home, Loader2, Mail, MessageSquare, Moon, Plus, PlusCircle, Search, Server, Settings, Share2, Shield, Sun, Trash, User, Workflow, Wallet, Notebook, RefreshCw, X, Info, AlertTriangle, Coins, ArrowUp, ArrowDown, CalendarDays, TrendingDown, CreditCard, CheckCircle, Languages, Menu} from 'lucide-react';
 
 const Icons = {
   arrowLeft: ArrowLeft,
@@ -10,14 +10,14 @@ const Icons = {
   workflow: Workflow,
   close: X,
   copy: Copy,
-  dark: Moon,
+  dark: Moon, // Renamed from moon for consistency if needed, but Moon is fine
   edit: Edit,
   externalLink: ExternalLink,
   file: File,
   fileText: FileText,
   help: HelpCircle,
   home: Home,
-  light: Sun,
+  light: Sun, // Renamed from sun for consistency if needed, but Sun is fine
   loader: Loader2,
   mail: Mail,
   messageSquare: MessageSquare,
@@ -44,6 +44,10 @@ const Icons = {
   creditCard: CreditCard,
   checkCircle: CheckCircle,
   languages: Languages,
+  menu: Menu, // Added Menu icon
+  // Ensuring consistent naming for theme icons
+  moon: Moon,
+  sun: Sun,
 };
 
 export {Icons};
@@ -55,3 +59,4 @@ export {Icons};
 
 
     
+

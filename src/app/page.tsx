@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -40,7 +41,7 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
-  backupAndResetAllData, // Updated function name
+  backupAndResetAllData,
 } from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
@@ -164,7 +165,7 @@ export default function Home() {
   const [category, setCategory] = useState(categories[0]);
   const [amount, setAmount] = useState<string>(""); 
   const [type, setType] = useState<"income" | "expense">("expense");
-  const [notesInput, setNotesInput] = useState<string>(""); // Renamed to avoid conflict
+  const [notesInput, setNotesInput] = useState<string>("");
   
   const [darkMode, setDarkMode] = useState(false); 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
@@ -216,7 +217,7 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === 'true'; 
+      const initialDarkMode = storedDarkMode === 'false' ? false : true; // Default to dark
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -348,19 +349,16 @@ export default function Home() {
   const handleResetData = useCallback(async () => {
     try {
       const backupId = await backupAndResetAllData();
-      // Backup notes to localStorage
       const notesData = localStorage.getItem("financialNotes");
       if (notesData) {
         localStorage.setItem(`financialNotes_backup_${backupId}`, notesData);
       }
       localStorage.removeItem("financialNotes");
-      // Also clear debt data if stored in localStorage
       const debtData = localStorage.getItem("pocketLedgerDebts");
       if (debtData) {
         localStorage.setItem(`pocketLedgerDebts_backup_${backupId}`, debtData);
       }
       localStorage.removeItem("pocketLedgerDebts");
-
 
       toast({
         title: "Data Reset & Backed Up!",
@@ -406,14 +404,8 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (/^\d*\.?\d*$/.test(value) || value === "") { // Allow digits and a single optional decimal point
-        // Ensure only one decimal point
-        if (value.split('.').length > 2) return;
-        
-        // Ensure only two digits after decimal
-        const parts = value.split('.');
-        if (parts[1] && parts[1].length > 2) return;
-
+    // Allow only digits, disallow decimal points and commas
+    if (/^\d*$/.test(value) || value === "") {
         setAmount(value);
     }
   };
@@ -434,35 +426,31 @@ export default function Home() {
     <TooltipProvider>
       <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
         <Toaster />
-        <header className="flex flex-col sm:flex-row justify-between items-center sm:items-center mb-6 sm:mb-8 gap-4 sm:gap-0">
-          <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center text-center sm:text-left">
+        <header className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4">
+          <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center text-center sm:text-left shrink-0">
             <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
             PocketLedger Pro
           </h1>
-          <div className="flex flex-col items-center space-y-2 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-2 md:space-x-4">
-            <Link href="/notes" passHref>
-              <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
-                <Icons.notebook className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                My Notes
-              </Button>
-            </Link>
-            <Link href="/debt-reduction" passHref>
-              <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
-                <Icons.trendingDown className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                Debt Plans
-              </Button>
-            </Link>
-            <Link href="/settings" passHref>
-              <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
-                <Icons.settings className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                Settings
-              </Button>
-            </Link>
+          <div className="flex items-center space-x-2 md:space-x-3">
+            {/* Desktop Links */}
+            <div className="hidden md:flex items-center space-x-2">
+              <Link href="/notes" passHref>
+                <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-3 py-1.5">
+                  <Icons.notebook className="mr-1 h-4 w-4" /> My Notes
+                </Button>
+              </Link>
+              <Link href="/debt-reduction" passHref>
+                <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-3 py-1.5">
+                  <Icons.trendingDown className="mr-1 h-4 w-4" /> Debt Plans
+                </Button>
+              </Link>
+            </div>
+
+            {/* Currency Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-2 sm:px-4 py-1 sm:py-2">
-                  <Icons.coins className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  {selectedCurrency.code}
+                <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-3 py-1.5 h-9">
+                  <Icons.coins className="mr-1 h-4 w-4" /> {selectedCurrency.code}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card/90 backdrop-blur-md rounded-xl shadow-lg">
@@ -482,17 +470,43 @@ export default function Home() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <div className="flex items-center space-x-1 sm:space-x-2">
-              <Label htmlFor="dark-mode" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
-                {darkMode ? <Icons.dark className="h-5 w-5" /> : <Icons.light className="h-5 w-5" />}
+
+            {/* Theme Toggle */}
+            <div className="flex items-center space-x-1">
+              <Label htmlFor="dark-mode-toggle-main" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
+                {darkMode ? <Icons.moon className="h-5 w-5" /> : <Icons.sun className="h-5 w-5" />}
               </Label>
               <Switch
-                id="dark-mode"
+                id="dark-mode-toggle-main"
                 checked={darkMode}
                 onCheckedChange={toggleDarkMode}
                 className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted shadow-inner rounded-full"
                 aria-label="Toggle dark mode"
               />
+            </div>
+
+            {/* Mobile Menu */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="rounded-lg shadow-md h-9 w-9">
+                    <Icons.menu className="h-5 w-5" />
+                    <span className="sr-only">Open Menu</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-card/90 backdrop-blur-md rounded-xl shadow-lg w-48">
+                  <DropdownMenuItem asChild>
+                    <Link href="/notes" className="flex items-center w-full px-2 py-1.5 text-sm">
+                      <Icons.notebook className="mr-2 h-4 w-4" /> My Notes
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/debt-reduction" className="flex items-center w-full px-2 py-1.5 text-sm">
+                      <Icons.trendingDown className="mr-2 h-4 w-4" /> Debt Plans
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>
@@ -578,7 +592,7 @@ export default function Home() {
                     className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
                     placeholder="e.g. 100"
                     aria-label="Enter transaction amount"
-                    inputMode="decimal" 
+                    inputMode="numeric" 
                   />
                 </div>
                 <div>
@@ -824,6 +838,13 @@ export default function Home() {
         )}
          <footer className="mt-auto border-t border-border/50 pt-8 pb-6 text-center">
           <div className="container mx-auto flex flex-col items-center space-y-6">
+            
+            <Link href="/settings" passHref>
+              <Button variant="outline" className="w-full max-w-xs sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3">
+                <Icons.settings className="mr-2 h-5 w-5" />
+                Application Settings
+              </Button>
+            </Link>
             
             <SlideToConfirmButton
               onConfirm={handleResetData}
