@@ -3,7 +3,7 @@
 import { open, Database as SQLiteDatabase } from 'sqlite';
 import sqlite3 from 'sqlite3';
 import path from 'path';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 
 const DB_FILE_PATH = path.join(process.cwd(), 'pocketledger.db');
 
@@ -230,7 +230,8 @@ export const listDatabaseBackups = async (): Promise<string[]> => {
   console.log("Listing database backups...");
   const tables = await db.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'transactions_backup_%';");
   const backupIds = tables
-    .map(t => t.name.replace('transactions_backup_', ''))
+    .map(t => t.name.replace('transactions_backup_', '').replace('users_backup_','')) // also handle users_backup_ if it's the only one
+    .filter((value, index, self) => self.indexOf(value) === index) // distinct
     .sort((a, b) => b.localeCompare(a)); // Sort descending, newest first
   console.log(`Found ${backupIds.length} database backups.`);
   return backupIds;
@@ -249,14 +250,29 @@ export const restoreDatabaseBackup = async (backupId: string): Promise<void> => 
     // Restore transactions table
     console.log(`Dropping current 'transactions' table if it exists.`);
     await db.exec('DROP TABLE IF EXISTS transactions;');
-    console.log(`Renaming '${backupTransactionsTableName}' to 'transactions'.`);
-    await db.exec(`ALTER TABLE ${backupTransactionsTableName} RENAME TO transactions;`);
+    
+    const backupTransactionsTableExists = await db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name='${backupTransactionsTableName}';`);
+    if (backupTransactionsTableExists) {
+      console.log(`Renaming '${backupTransactionsTableName}' to 'transactions'.`);
+      await db.exec(`ALTER TABLE ${backupTransactionsTableName} RENAME TO transactions;`);
+    } else {
+      console.log(`Backup table '${backupTransactionsTableName}' not found. Re-initializing empty 'transactions' table.`);
+      await db.exec(`CREATE TABLE transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, category TEXT NOT NULL, amount REAL NOT NULL, type TEXT NOT NULL CHECK(type IN ('income', 'expense')), notes TEXT)`);
+    }
     
     // Restore users table
     console.log(`Dropping current 'users' table if it exists.`);
     await db.exec('DROP TABLE IF EXISTS users;');
-    console.log(`Renaming '${backupUsersTableName}' to 'users'.`);
-    await db.exec(`ALTER TABLE ${backupUsersTableName} RENAME TO users;`);
+
+    const backupUsersTableExists = await db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name='${backupUsersTableName}';`);
+    if (backupUsersTableExists) {
+      console.log(`Renaming '${backupUsersTableName}' to 'users'.`);
+      await db.exec(`ALTER TABLE ${backupUsersTableName} RENAME TO users;`);
+    } else {
+      console.log(`Backup table '${backupUsersTableName}' not found. Re-initializing empty 'users' table.`);
+       await db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, password TEXT NOT NULL)`);
+    }
+
 
     await db.exec('COMMIT;');
     console.log(`Database restoration from backup ID ${backupId} completed successfully.`);
@@ -269,6 +285,45 @@ export const restoreDatabaseBackup = async (backupId: string): Promise<void> => 
       console.error("Error during rollback:", rbError);
     }
     throw new Error(`Failed to restore database backup: ${error.message}`);
+  }
+};
+
+export const deleteDatabaseBackupTables = async (backupId: string): Promise<void> => {
+  const db = await getDbInstance();
+  const backupTransactionsTableName = `transactions_backup_${backupId}`;
+  const backupUsersTableName = `users_backup_${backupId}`;
+
+  console.log(`Attempting to delete database backup tables for ID: ${backupId}`);
+  try {
+    await db.exec('BEGIN TRANSACTION;');
+    
+    const transactionsBackupExists = await db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name = '${backupTransactionsTableName}'`);
+    if (transactionsBackupExists) {
+      await db.exec(`DROP TABLE IF EXISTS ${backupTransactionsTableName};`);
+      console.log(`Table ${backupTransactionsTableName} deleted.`);
+    } else {
+      console.log(`Table ${backupTransactionsTableName} not found, skipping deletion.`);
+    }
+
+    const usersBackupExists = await db.get(`SELECT name FROM sqlite_master WHERE type='table' AND name = '${backupUsersTableName}'`);
+    if (usersBackupExists) {
+      await db.exec(`DROP TABLE IF EXISTS ${backupUsersTableName};`);
+      console.log(`Table ${backupUsersTableName} deleted.`);
+    } else {
+      console.log(`Table ${backupUsersTableName} not found, skipping deletion.`);
+    }
+    
+    await db.exec('COMMIT;');
+    console.log(`Database backup tables for ID ${backupId} deleted successfully.`);
+  } catch (error: any) {
+    console.error(`Error deleting database backup tables for ID ${backupId}, attempting rollback:`, error);
+    try {
+      await db.exec('ROLLBACK;');
+      console.log("Rollback successful.");
+    } catch (rbError) {
+      console.error("Error during rollback:", rbError);
+    }
+    throw new Error(`Failed to delete database backup tables: ${error.message}`);
   }
 };
 
