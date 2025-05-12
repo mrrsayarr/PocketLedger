@@ -61,6 +61,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { getDebtTranslation, getTranslatedOptions, getDebtTypeKeyFromValue, getPaymentFrequencyKeyFromValue, type Language, debtTranslations } from "./translations";
+import { Textarea } from "@/components/ui/textarea";
 
 
 interface Currency {
@@ -150,7 +151,7 @@ export default function DebtManagementPage() {
       if (storedDarkMode === 'true') {
         document.documentElement.classList.add("dark");
       } else {
-        document.documentElement.classList.remove("dark"); // Default to light
+        document.documentElement.classList.remove("dark"); 
       }
 
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -177,10 +178,12 @@ export default function DebtManagementPage() {
       const storedLang = localStorage.getItem("pocketLedgerDebtLang") as Language | null;
       if (storedLang && debtTranslations[storedLang]) {
         setCurrentLanguage(storedLang);
+      } else {
+        setCurrentLanguage("en"); // Default to English if no preference or invalid preference
       }
       setIsLoading(false);
     }
-  }, []); // currentLanguage removed as it's set here or by user action
+  }, []); 
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isLoading) {
@@ -232,9 +235,9 @@ export default function DebtManagementPage() {
       currentBalance: parsedCurrentBalance,
       interestRate: parsedInterestRate,
       minimumPayment: parsedMinimumPayment,
-      paymentFrequency, // Storing English key
+      paymentFrequency, 
       nextDueDate,
-      debtType, // Storing English key
+      debtType, 
       startDate,
       notes: debtNotes,
       payments: [],
@@ -311,7 +314,7 @@ export default function DebtManagementPage() {
   const totalRemainingDebt = useMemo(() => activeDebts.reduce((sum, debt) => sum + debt.currentBalance, 0), [activeDebts]);
   const totalMinimumMonthlyPayment = useMemo(() => activeDebts.filter(d=> d.paymentFrequency === "Monthly").reduce((sum, debt) => sum + debt.minimumPayment, 0), [activeDebts]);
   const totalMinimumWeeklyPayment = useMemo(() => activeDebts.filter(d=> d.paymentFrequency === "Weekly").reduce((sum, debt) => sum + debt.minimumPayment, 0), [activeDebts]);
-  // Add more for other frequencies if needed for display
+
 
   const translatedDebtTypeOptions = useMemo(() => getTranslatedOptions(currentLanguage, 'debtTypes'), [currentLanguage]);
   const translatedPaymentFrequencyOptions = useMemo(() => getTranslatedOptions(currentLanguage, 'paymentFrequencies'), [currentLanguage]);
@@ -347,11 +350,11 @@ export default function DebtManagementPage() {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card/90 backdrop-blur-md rounded-xl shadow-lg">
-                    <DropdownMenuItem onClick={() => setCurrentLanguage("en")} className={cn(currentLanguage === "en" && "bg-primary/20 font-semibold")}>
-                        {getDebtTranslation(currentLanguage, "english")}
+                    <DropdownMenuItem onClick={() => setCurrentLanguage("en")} className={cn("cursor-pointer",currentLanguage === "en" && "bg-primary/20 font-semibold")}>
+                        {getDebtTranslation("en", "english")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setCurrentLanguage("tr")} className={cn(currentLanguage === "tr" && "bg-primary/20 font-semibold")}>
-                        {getDebtTranslation(currentLanguage, "turkish")}
+                    <DropdownMenuItem onClick={() => setCurrentLanguage("tr")} className={cn("cursor-pointer", currentLanguage === "tr" && "bg-primary/20 font-semibold")}>
+                        {getDebtTranslation("tr", "turkish")}
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -463,7 +466,7 @@ export default function DebtManagementPage() {
           <CardTitle className="text-xl sm:text-2xl font-semibold">{getDebtTranslation(currentLanguage, "debtOverview")}</CardTitle>
           <div className="flex flex-col sm:flex-row justify-between text-sm mt-2">
             <p>{getDebtTranslation(currentLanguage, "totalRemainingDebt")}: <span className="font-bold text-destructive">{currencySymbol}{totalRemainingDebt.toFixed(2)}</span></p>
-            <p>{getDebtTranslation(currentLanguage, "totalMinPaymentByType", getDebtTranslation(currentLanguage, "paymentFrequencies")["Monthly"] )}: <span className="font-bold text-primary">{currencySymbol}{totalMinimumMonthlyPayment.toFixed(2)}</span></p>
+            <p>{getDebtTranslation(currentLanguage, "totalMinPaymentByType", debtTranslations[currentLanguage].paymentFrequencies["Monthly"] )}: <span className="font-bold text-primary">{currencySymbol}{totalMinimumMonthlyPayment.toFixed(2)}</span></p>
           </div>
         </CardHeader>
         <CardContent>
