@@ -8,6 +8,8 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +42,7 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
+  updateTransactionInDb, // Added import
 } from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
@@ -56,6 +59,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog, // Added import
+  DialogContent, // Added import
+  DialogHeader, // Added import
+  DialogTitle, // Added import
+  DialogDescription as DialogDesc, // Added import, aliased to avoid conflict
+  DialogFooter, // Added import
+  DialogClose, // Added import
+} from "@/components/ui/dialog"; // Added import
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -70,6 +82,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 
 type Transaction = {
@@ -131,7 +144,6 @@ const CustomTooltip = ({ active, payload, currencySymbol }: { active?: boolean; 
       if (percentScaled === 0) {
         displayPercentText = "0.00";
       } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00" && percentScaled !== 0) {
-        // For very small non-zero percentages, show more precision
         displayPercentText = percentScaled.toFixed(Math.max(2, -Math.floor(Math.log10(percentScaled)) + 1 )); 
       } else {
         displayPercentText = percentScaled.toFixed(2);
@@ -179,6 +191,24 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  // Edit Transaction State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [editFormData, setEditFormData] = useState<{
+    date: Date | undefined;
+    category: string;
+    amount: string;
+    type: "income" | "expense";
+    notes: string;
+  }>({
+    date: new Date(),
+    category: categories[0],
+    amount: "",
+    type: "expense",
+    notes: "",
+  });
+
+
   const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
     setTransactions(transactionsFromDb);
@@ -220,7 +250,6 @@ export default function Home() {
       if (storedDarkMode === 'false') { 
         document.documentElement.classList.remove("dark");
       } else { 
-        // Default to dark or if value is 'true' or null
         document.documentElement.classList.add("dark");
       }
 
@@ -322,6 +351,50 @@ export default function Home() {
     await loadDashboardData();
   };
 
+  const openEditModal = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setEditFormData({
+      date: new Date(transaction.date), // transaction.date is already a Date object
+      category: transaction.category,
+      amount: transaction.amount.toString(),
+      type: transaction.type,
+      notes: transaction.notes || "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateTransaction = async () => {
+    if (!editingTransaction || !editFormData.date || !editFormData.category || editFormData.amount === "") {
+      toast({ title: "Error", description: "Please fill all required fields for editing.", variant: "destructive" });
+      return;
+    }
+    const numericAmount = parseFloat(editFormData.amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      toast({ title: "Error", description: "Amount must be a valid positive number.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await updateTransactionInDb(
+        editingTransaction.id,
+        editFormData.date.toISOString(),
+        editFormData.category,
+        numericAmount,
+        editFormData.type,
+        editFormData.notes
+      );
+      toast({ title: "Success", description: "Transaction updated successfully." });
+      setIsEditModalOpen(false);
+      setEditingTransaction(null);
+      await loadTransactions();
+      await loadDashboardData();
+    } catch (error: any) {
+      console.error("Error updating transaction:", error);
+      toast({ title: "Database Error", description: error.message || "Could not update transaction.", variant: "destructive" });
+    }
+  };
+
+
   const handleCurrencyChange = (currency: Currency) => {
     setSelectedCurrency(currency);
     toast({
@@ -332,11 +405,18 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow only digits, disallow decimal points and commas
     if (/^\d*$/.test(value) || value === "") {
         setAmount(value);
     }
   };
+  
+  const handleEditAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (/^\d*$/.test(value) || value === "") {
+      setEditFormData(prev => ({ ...prev, amount: value }));
+    }
+  };
+
 
   // Pagination logic
   const totalPages = Math.ceil(transactions.length / itemsPerPage);
@@ -469,14 +549,30 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <div className="flex flex-col items-center">
                 <Label htmlFor="date-calendar" className="mb-2 font-medium text-card-foreground self-start">Date</Label>
-                <Calendar
-                  id="date-calendar"
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  className="rounded-lg border p-3 w-full shadow-inner bg-background/70 backdrop-blur-sm"
-                  aria-label="Select transaction date"
-                />
+                 <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary h-10",
+                        !date && "text-muted-foreground"
+                      )}
+                      id="date-calendar"
+                    >
+                      <Icons.calendarDays className="mr-2 h-4 w-4" />
+                      {date ? format(date, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={setDate}
+                      initialFocus
+                      className="bg-card/95 rounded-md"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-4 sm:space-y-6">
                 <div>
@@ -618,13 +714,16 @@ export default function Home() {
                         "-"
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right space-x-1">
+                       <Button variant="ghost" size="icon" className="rounded-md shadow-sm text-primary hover:bg-primary/10 h-8 w-8 transform hover:scale-105" onClick={() => openEditModal(transaction)} aria-label={`Edit transaction for ${transaction.category} on ${format(new Date(transaction.date), "PPP")}`}>
+                        <Icons.edit className="h-4 w-4" />
+                      </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="rounded-md shadow-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 transition-all transform hover:scale-105"
+                            size="icon"
+                            className="rounded-md shadow-sm text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))]/10 h-8 w-8 transition-all transform hover:scale-105"
                             aria-label={`Delete transaction for ${transaction.category} on ${format(new Date(transaction.date), "PPP")}`}
                           >
                             <Icons.trash className="h-4 w-4" />
@@ -682,6 +781,105 @@ export default function Home() {
             )}
           </CardContent>
         </Card>
+        
+        {/* Edit Transaction Modal */}
+        {editingTransaction && (
+          <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+            <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl">
+              <DialogHeader>
+                <DialogTitle className="text-xl text-card-foreground">Edit Transaction</DialogTitle>
+                <DialogDesc className="text-muted-foreground">
+                  Update the details for transaction ID: {editingTransaction.id}
+                </DialogDesc>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                    <Label htmlFor="edit-date-calendar" className="mb-1 font-medium text-card-foreground">Date</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                            variant={"outline"}
+                            className={cn(
+                                "w-full justify-start text-left font-normal rounded-lg shadow-inner bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary h-10",
+                                !editFormData.date && "text-muted-foreground"
+                            )}
+                            id="edit-date-calendar"
+                            >
+                            <Icons.calendarDays className="mr-2 h-4 w-4" />
+                            {editFormData.date ? format(editFormData.date, "PPP") : <span>Pick a date</span>}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+                            <Calendar
+                            mode="single"
+                            selected={editFormData.date}
+                            onSelect={(d) => setEditFormData(prev => ({ ...prev, date: d }))}
+                            initialFocus
+                            className="bg-card/95 rounded-md"
+                            />
+                        </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-category-select" className="mb-1 font-medium text-card-foreground">Category</Label>
+                    <select
+                      id="edit-category-select"
+                      className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
+                      value={editFormData.category}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, category: e.target.value }))}
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="edit-amount-input" className="mb-1 font-medium text-card-foreground">Amount ({selectedCurrency.symbol})</Label>
+                    <Input
+                      type="text"
+                      id="edit-amount-input"
+                      value={editFormData.amount}
+                      onChange={handleEditAmountChange}
+                      className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all text-sm h-10"
+                      inputMode="numeric"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-type-select" className="mb-1 font-medium text-card-foreground">Type</Label>
+                    <select
+                      id="edit-type-select"
+                      className="w-full rounded-lg border p-3 bg-background/70 backdrop-blur-sm shadow-inner text-foreground focus:ring-2 focus:ring-primary transition-all h-10 text-sm"
+                      value={editFormData.type}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, type: e.target.value as "income" | "expense" }))}
+                    >
+                      <option value="expense">Expense</option>
+                      <option value="income">Income</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="edit-notes-textarea" className="mb-1 font-medium text-card-foreground">Notes (Optional)</Label>
+                  <Textarea
+                    id="edit-notes-textarea"
+                    value={editFormData.notes}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, notes: e.target.value }))}
+                    className="rounded-lg shadow-inner p-3 bg-background/70 backdrop-blur-sm focus:ring-2 focus:ring-primary transition-all min-h-[80px] text-sm"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline" className="rounded-lg shadow-md">Cancel</Button>
+                </DialogClose>
+                <Button onClick={handleUpdateTransaction} className="rounded-lg shadow-md bg-primary hover:bg-primary/90">Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
 
         {spendingData.length > 0 && (
           <Card className="h-[450px] sm:h-[550px] rounded-xl shadow-lg mb-6 sm:mb-8 bg-card/80 backdrop-blur-md">
@@ -798,4 +996,3 @@ export default function Home() {
   );
 }
     
-

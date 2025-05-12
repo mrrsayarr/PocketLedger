@@ -1,3 +1,4 @@
+
 'use server';
 
 import { open, Database as SQLiteDatabase } from 'sqlite';
@@ -112,6 +113,40 @@ export const addTransactionToDb = async (date: string, category: string, amount:
     throw new Error(`Failed to insert transaction: ${insertError.message}`);
   }
 };
+
+export const updateTransactionInDb = async (id: number, date: string, category: string, amount: number, type: 'income' | 'expense', notes?: string) => {
+  let db: SQLiteDatabase;
+  try {
+    db = await getDbInstance();
+  } catch (initError: any) {
+    console.error('Failed to get DB instance in updateTransactionInDb:', initError);
+    throw new Error(`Database connection error: ${initError.message}`);
+  }
+
+  try {
+    const result = await db.run(
+      'UPDATE transactions SET date = ?, category = ?, amount = ?, type = ?, notes = ? WHERE id = ?',
+      date,
+      category,
+      amount,
+      type,
+      notes || null,
+      id
+    );
+    if (typeof result.changes === 'number' && result.changes === 0) {
+      // This could mean the transaction ID didn't exist, or the data was identical.
+      // For simplicity, we'll log a warning but not throw an error if no rows were found/changed.
+      // If strict "not found" error is needed, a SELECT check could be done first.
+      console.warn(`Update operation for transaction ID ${id} affected 0 rows. ID might not exist or data was unchanged.`);
+    } else {
+      console.log(`Transaction ID ${id} updated. Rows affected: ${result.changes}`);
+    }
+  } catch (updateError: any) {
+    console.error(`Error updating transaction ID ${id}:`, updateError);
+    throw new Error(`Failed to update transaction: ${updateError.message}`);
+  }
+};
+
 
 export const deleteTransactionFromDb = async (id: number) => {
   const db = await getDbInstance();
@@ -230,9 +265,9 @@ export const listDatabaseBackups = async (): Promise<string[]> => {
   console.log("Listing database backups...");
   const tables = await db.all<{ name: string }>("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'transactions_backup_%';");
   const backupIds = tables
-    .map(t => t.name.replace('transactions_backup_', '').replace('users_backup_','')) // also handle users_backup_ if it's the only one
-    .filter((value, index, self) => self.indexOf(value) === index) // distinct
-    .sort((a, b) => b.localeCompare(a)); // Sort descending, newest first
+    .map(t => t.name.replace('transactions_backup_', '').replace('users_backup_','')) 
+    .filter((value, index, self) => self.indexOf(value) === index) 
+    .sort((a, b) => b.localeCompare(a)); 
   console.log(`Found ${backupIds.length} database backups.`);
   return backupIds;
 };
@@ -247,7 +282,6 @@ export const restoreDatabaseBackup = async (backupId: string): Promise<void> => 
   try {
     await db.exec('BEGIN TRANSACTION;');
 
-    // Restore transactions table
     console.log(`Dropping current 'transactions' table if it exists.`);
     await db.exec('DROP TABLE IF EXISTS transactions;');
     
@@ -260,7 +294,6 @@ export const restoreDatabaseBackup = async (backupId: string): Promise<void> => 
       await db.exec(`CREATE TABLE transactions (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, category TEXT NOT NULL, amount REAL NOT NULL, type TEXT NOT NULL CHECK(type IN ('income', 'expense')), notes TEXT)`);
     }
     
-    // Restore users table
     console.log(`Dropping current 'users' table if it exists.`);
     await db.exec('DROP TABLE IF EXISTS users;');
 
@@ -335,7 +368,7 @@ export const isPasswordSet = async (): Promise<boolean> => {
     return !!user && !!user.password;
   } catch (error) {
      console.warn("Error checking if password is set (users table might not exist yet):", error);
-     return false; // If table doesn't exist or other error, assume password not set
+     return false; 
   }
 };
 
