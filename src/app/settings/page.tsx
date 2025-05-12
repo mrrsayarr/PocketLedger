@@ -44,6 +44,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+
 
 interface BackupInfo {
   id: string;
@@ -391,7 +393,7 @@ export default function SettingsPage() {
                         key={currency.code}
                         onClick={() => handleCurrencyChange(currency)}
                         className={cn(
-                        "text-card-foreground hover:bg-primary/10",
+                        "text-card-foreground hover:bg-primary/10 cursor-pointer",
                         selectedCurrency.code === currency.code && "bg-primary/20 font-semibold"
                         )}
                     >
