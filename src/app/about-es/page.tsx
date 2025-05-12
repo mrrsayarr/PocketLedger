@@ -12,11 +12,11 @@ export default function AboutEsPage() {
     // Sincronización del tema
     const storedDarkMode = localStorage.getItem('darkMode');
     if (typeof window !== "undefined") { // Ensure this runs client-side
-        if (storedDarkMode === 'false') { 
-          document.documentElement.classList.remove('dark');
-        } else { 
-          // Default to dark if 'true' or null (not set)
+        if (storedDarkMode === 'true') { 
           document.documentElement.classList.add('dark');
+        } else { 
+          // Default to light if 'false' or null (not set)
+          document.documentElement.classList.remove('dark');
         }
     }
   }, []);
@@ -117,3 +117,4 @@ export default function AboutEsPage() {
     </div>
   );
 }
+

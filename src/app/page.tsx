@@ -167,7 +167,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notesInput, setNotesInput] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(true); 
+  const [darkMode, setDarkMode] = useState(false); // Default to light mode
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
 
   const [currentBalance, setCurrentBalance] = useState(0);
@@ -217,7 +217,8 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === 'false' ? false : true; // Default to dark
+      // Default to light mode if no setting is found or if it's not explicitly 'true'
+      const initialDarkMode = storedDarkMode === 'true'; 
       setDarkMode(initialDarkMode);
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
@@ -886,3 +887,4 @@ export default function Home() {
   );
 }
     
+

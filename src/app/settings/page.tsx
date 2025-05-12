@@ -103,10 +103,10 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
         const storedDarkMode = localStorage.getItem('darkMode');
-        if (storedDarkMode === 'false') { 
-          document.documentElement.classList.remove('dark');
-        } else {
+        if (storedDarkMode === 'true') { 
           document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark'); // Default to light
         }
     }
     loadBackups();
@@ -322,3 +322,4 @@ export default function SettingsPage() {
   );
 }
     
+

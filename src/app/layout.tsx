@@ -25,8 +25,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  // maximumScale: 1, // Removed to allow zooming
-  userScalable: true, // Changed to true to allow user scaling
+  userScalable: true, 
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: 'hsl(0 0% 100%)' },
     { media: '(prefers-color-scheme: dark)', color: 'hsl(0 0% 3.9%)' },
@@ -41,23 +40,23 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Script to set dark mode preference from localStorage */}
+        {/* Script to set theme preference from localStorage */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   const storedDarkMode = localStorage.getItem('darkMode');
-                  if (storedDarkMode === 'false') {
-                    // If 'false', remove 'dark' class if present
-                    document.documentElement.classList.remove('dark');
-                  } else { 
-                    // If 'true' or null (not set), add 'dark' class
+                  if (storedDarkMode === 'true') {
+                    // If 'true', add 'dark' class
                     document.documentElement.classList.add('dark');
+                  } else { 
+                    // If 'false' or null (not set), remove 'dark' class (default to light)
+                    document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {
-                  // Fallback or if localStorage is unavailable, default to adding 'dark'
-                  document.documentElement.classList.add('dark');
+                  // Fallback or if localStorage is unavailable, default to light (no 'dark' class)
+                  document.documentElement.classList.remove('dark');
                 }
               })();
             `,
@@ -70,3 +69,4 @@ export default function RootLayout({
     </html>
   );
 }
+

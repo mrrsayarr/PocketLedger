@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -148,10 +147,10 @@ export default function DebtManagementPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode === 'false') {
-        document.documentElement.classList.remove("dark");
-      } else {
+      if (storedDarkMode === 'true') {
         document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark"); // Default to light
       }
 
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -636,3 +635,4 @@ export default function DebtManagementPage() {
     </div>
   );
 }
+
