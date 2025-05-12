@@ -1,5 +1,5 @@
 
-import {ArrowLeft, ArrowRight, Check, ChevronsUpDown, Circle, Copy, Edit, ExternalLink, File, FileText, HelpCircle, Home, Loader2, Mail, MessageSquare, Moon, Plus, PlusCircle, Search, Server, Settings, Share2, Shield, Sun, Trash, User, Workflow, Wallet, Notebook, RefreshCw, X, Info, AlertTriangle, Coins, ArrowUp, ArrowDown, CalendarDays, TrendingDown, CreditCard, CheckCircle, Languages, Menu, Sparkles, Wand2} from 'lucide-react';
+import {ArrowLeft, ArrowRight, Check, ChevronsUpDown, Circle, Copy, Edit, ExternalLink, File, FileText, HelpCircle, Home, Loader2, Mail, MessageSquare, Moon, Plus, PlusCircle, Search, Server, Settings, Share2, Shield, Sun, Trash, User, Workflow, Wallet, Notebook, RefreshCw, X, Info, AlertTriangle, Coins, ArrowUp, ArrowDown, CalendarDays, TrendingDown, CreditCard, CheckCircle, Languages, Menu, Sparkles, Wand2, ClipboardList} from 'lucide-react';
 
 const Icons = {
   arrowLeft: ArrowLeft,
@@ -44,9 +44,10 @@ const Icons = {
   creditCard: CreditCard,
   checkCircle: CheckCircle,
   languages: Languages,
-  menu: Menu, // Added Menu icon
-  sparkles: Sparkles, // Added Sparkles icon
-  wand2: Wand2, // Added Wand2 icon
+  menu: Menu, 
+  sparkles: Sparkles, 
+  wand2: Wand2, 
+  clipboardList: ClipboardList, // Added ClipboardList icon
   // Ensuring consistent naming for theme icons
   moon: Moon,
   sun: Sun,
@@ -61,5 +62,6 @@ export {Icons};
 
 
     
+
 
 

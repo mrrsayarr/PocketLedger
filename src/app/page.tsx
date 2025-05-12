@@ -247,10 +247,10 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode === 'true') { 
-        document.documentElement.classList.add("dark");
-      } else { 
+      if (storedDarkMode === 'false') { 
         document.documentElement.classList.remove("dark");
+      } else { 
+        document.documentElement.classList.add("dark");
       }
 
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -472,6 +472,11 @@ export default function Home() {
                   <Icons.trendingDown className="mr-1 h-4 w-4" /> Debt Plans
                 </Button>
               </Link>
+              <Link href="/todo" passHref>
+                <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-3 py-1.5">
+                  <Icons.clipboardList className="mr-1 h-4 w-4" /> To-Do List
+                </Button>
+              </Link>
             </div>
 
             {/* Mobile Menu */}
@@ -492,6 +497,11 @@ export default function Home() {
                   <DropdownMenuItem asChild>
                     <Link href="/debt-reduction" className="flex items-center w-full px-2 py-1.5 text-sm">
                       <Icons.trendingDown className="mr-2 h-4 w-4" /> Debt Plans
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/todo" className="flex items-center w-full px-2 py-1.5 text-sm">
+                      <Icons.clipboardList className="mr-2 h-4 w-4" /> To-Do List
                     </Link>
                   </DropdownMenuItem>
                    <DropdownMenuSeparator />
@@ -998,4 +1008,3 @@ export default function Home() {
   );
 }
     
-
