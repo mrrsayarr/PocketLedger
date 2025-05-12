@@ -9,13 +9,12 @@ import { useEffect } from "react";
 
 export default function AboutTrPage() {
     useEffect(() => {
-    const storedDarkMode = localStorage.getItem('darkMode');
     if (typeof window !== "undefined") { // Ensure this runs client-side
-         // Default to dark if not 'false'
-        if (storedDarkMode === 'false') {
-          document.documentElement.classList.remove('dark');
-        } else { 
+        const storedDarkMode = localStorage.getItem('darkMode');
+        if (storedDarkMode === 'true') { // If 'true', add 'dark' class
           document.documentElement.classList.add('dark');
+        } else { // If 'false' or null (not set), remove 'dark' class (default to light)
+          document.documentElement.classList.remove('dark');
         }
     }
   }, []);
@@ -124,4 +123,5 @@ export default function AboutTrPage() {
     </div>
   );
 }
+
 

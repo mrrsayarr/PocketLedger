@@ -214,10 +214,9 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      const initialDarkMode = storedDarkMode === 'false' ? false : true; // Default to dark if not 'false'
-      if (initialDarkMode) {
+      if (storedDarkMode === 'true') { // If 'true', add 'dark' class
         document.documentElement.classList.add("dark");
-      } else {
+      } else { // If 'false' or null (not set), remove 'dark' class (default to light)
         document.documentElement.classList.remove("dark");
       }
 
@@ -753,3 +752,4 @@ export default function Home() {
   );
 }
     
+

@@ -98,11 +98,10 @@ export default function NotesPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
         const storedDarkMode = localStorage.getItem('darkMode');
-        // Default to dark if not 'false'
-        if (storedDarkMode === 'false') {
+        if (storedDarkMode === 'true') { // If 'true', add 'dark' class
+            document.documentElement.classList.add('dark');
+        } else { // If 'false' or null (not set), remove 'dark' class (default to light)
             document.documentElement.classList.remove('dark');
-        } else {
-            document.documentElement.classList.add('dark'); 
         }
 
         const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -542,5 +541,6 @@ export default function NotesPage() {
     </TooltipProvider>
   );
 }
+
 
 
