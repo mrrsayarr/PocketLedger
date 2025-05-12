@@ -176,6 +176,9 @@ export default function Home() {
   const prevBalanceRef = useRef<number>(0);
   const [showNegativeBalanceAlert, setShowNegativeBalanceAlert] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
   const loadTransactions = useCallback(async () => {
     const transactionsFromDb = await getAllTransactionsFromDb();
     setTransactions(transactionsFromDb);
@@ -214,10 +217,11 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode === 'true') {
-        document.documentElement.classList.add("dark");
-      } else { 
+      if (storedDarkMode === 'false') { 
         document.documentElement.classList.remove("dark");
+      } else { 
+        // Default to dark or if value is 'true' or null
+        document.documentElement.classList.add("dark");
       }
 
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -322,7 +326,7 @@ export default function Home() {
     setSelectedCurrency(currency);
     toast({
       title: "Currency Updated",
-      description: `Display currency changed to ${currency.name} (${currency.code}).`,
+      description: `Display currency changed to ${currency.name} (${currency.code}). Refresh page to see changes across all amounts.`,
     });
   };
 
@@ -331,6 +335,24 @@ export default function Home() {
     // Allow only digits, disallow decimal points and commas
     if (/^\d*$/.test(value) || value === "") {
         setAmount(value);
+    }
+  };
+
+  // Pagination logic
+  const totalPages = Math.ceil(transactions.length / itemsPerPage);
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentTransactions = transactions.slice(indexOfFirstItem, indexOfLastItem);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
     }
   };
 
@@ -369,9 +391,6 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-
-            {/* Currency Selector - Moved to Settings Page */}
-            {/* Theme Toggle - Moved to Settings Page */}
 
             {/* Mobile Menu */}
             <div className="md:hidden">
@@ -538,14 +557,14 @@ export default function Home() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {transactions.length === 0 && (
+                {currentTransactions.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No transactions yet. Add one above to get started!
                     </TableCell>
                   </TableRow>
                 )}
-                {transactions.map((transaction) => (
+                {currentTransactions.map((transaction) => (
                   <TableRow key={transaction.id} className="hover:bg-muted/30 transition-colors duration-200 ease-in-out">
                     <TableCell className="text-foreground whitespace-nowrap text-sm">
                       {format(new Date(transaction.date), "dd MMM yyyy")}
@@ -634,6 +653,33 @@ export default function Home() {
                 ))}
               </TableBody>
             </Table>
+            {transactions.length > itemsPerPage && (
+              <div className="flex justify-between items-center mt-6 pt-4 border-t border-border/50">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  className="rounded-lg shadow-md hover:bg-primary/10"
+                >
+                  <Icons.arrowLeft className="mr-2 h-4 w-4" />
+                  Previous
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg shadow-md hover:bg-primary/10"
+                >
+                  Next
+                  <Icons.arrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -752,3 +798,4 @@ export default function Home() {
   );
 }
     
+
