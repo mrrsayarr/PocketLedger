@@ -250,8 +250,8 @@ export default function NotesPage() {
       <Toaster />
       <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
-          <Icons.notebook className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
-          Financial Notes
+          <Icons.notebook className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
+          <span className="hidden md:inline">Financial Notes</span>
         </h1>
         <Link href="/" passHref>
           <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">

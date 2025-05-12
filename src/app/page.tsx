@@ -167,7 +167,7 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notesInput, setNotesInput] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(false); 
+  const [darkMode, setDarkMode] = useState(true); 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
 
   const [currentBalance, setCurrentBalance] = useState(0);
@@ -428,8 +428,8 @@ export default function Home() {
         <Toaster />
         <header className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center text-center sm:text-left shrink-0">
-            <Icons.wallet className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
-            PocketLedger Pro
+            <Icons.wallet className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
+            <span className="hidden md:inline">PocketLedger Pro</span>
           </h1>
           <div className="flex items-center space-x-2 md:space-x-3">
             {/* Desktop Links */}
@@ -857,25 +857,25 @@ export default function Home() {
             <p className="text-xs text-muted-foreground/80">
               (Tip: Press Shift + S + D to reset data without confirmation)
             </p>
-            <div className="w-full border-t border-gray-300 pt-6 mt-2 bg-white-50 shadow-md rounded-lg">
-              <div className="flex flex-wrap justify-center space-x-4 mb-4">
+            <div className="w-full border-t border-gray-300 dark:border-gray-700 pt-6 mt-2 bg-card/80 shadow-md rounded-lg">
+              <div className="flex flex-wrap justify-center space-x-2 sm:space-x-4 mb-2 sm:mb-4">
                 <Link href="/about" passHref>
-                  <Button variant="link" className="text-blue-600 hover:underline text-sm px-3 py-2 transition duration-300 ease-in-out transform hover:scale-105">
-                    About (English)
+                  <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 transition duration-300 ease-in-out transform hover:scale-105">
+                    About (EN)
                   </Button>
                 </Link>
                 <Link href="/about-tr" passHref>
-                  <Button variant="link" className="text-blue-600 hover:underline text-sm px-3 py-2 transition duration-300 ease-in-out transform hover:scale-105">
-                    Hakkında (Türkçe)
+                  <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 transition duration-300 ease-in-out transform hover:scale-105">
+                    Hakkında (TR)
                   </Button>
                 </Link>
                 <Link href="/about-es" passHref>
-                  <Button variant="link" className="text-blue-600 hover:underline text-sm px-3 py-2 transition duration-300 ease-in-out transform hover:scale-105">
-                    Acerca de (Español)
+                  <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 transition duration-300 ease-in-out transform hover:scale-105">
+                    Acerca de (ES)
                   </Button>
                 </Link>
               </div>
-              <p className="text-sm text-gray-600 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground text-center">
                 © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
               </p>
             </div>

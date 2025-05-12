@@ -336,8 +336,8 @@ export default function DebtManagementPage() {
       <Toaster />
       <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
-          <Icons.trendingDown className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
-          {getDebtTranslation(currentLanguage, "pageTitle")}
+          <Icons.trendingDown className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
+          <span className="hidden md:inline">{getDebtTranslation(currentLanguage, "pageTitle")}</span>
         </h1>
         <div className="flex items-center space-x-2">
             <DropdownMenu>

@@ -25,8 +25,8 @@ export default function AboutTrPage() {
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
       <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
-          <Icons.info className="mr-2 h-8 w-8 sm:h-10 sm:w-10" />
-          PocketLedger Pro Hakkında
+          <Icons.info className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
+          <span className="hidden md:inline">PocketLedger Pro Hakkında</span>
         </h1>
         <Link href="/" passHref>
           <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
