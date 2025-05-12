@@ -248,13 +248,13 @@ export default function NotesPage() {
     <TooltipProvider>
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm">
       <Toaster />
-      <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+      <header className="flex flex-row justify-between items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
           <Icons.notebook className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
           <span className="hidden md:inline">Financial Notes</span>
         </h1>
         <Link href="/" passHref>
-          <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+          <Button variant="outline" className="w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
             <Icons.arrowLeft className="mr-2 h-5 w-5" />
             Back to Dashboard
           </Button>
@@ -336,7 +336,7 @@ export default function NotesPage() {
                             {newNotePurchaseDate ? format(newNotePurchaseDate, "PPP") : <span>Pick a date</span>}
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+                    <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[51]" align="start">
                         <Calendar
                             mode="single"
                             selected={newNotePurchaseDate}
@@ -401,7 +401,7 @@ export default function NotesPage() {
                           <Icons.trash className="h-4 w-4" />
                         </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+                    <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[51]">
                       <AlertDialogHeader>
                         <AlertDialogTitle className="text-card-foreground">Delete Note?</AlertDialogTitle>
                         <AlertDialogDescription className="text-muted-foreground">
@@ -500,7 +500,7 @@ export default function NotesPage() {
                                 <Icons.trash className="h-4 w-4" />
                             </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+                            <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[51]">
                             <AlertDialogHeader>
                                 <AlertDialogTitle className="text-card-foreground">Delete Note?</AlertDialogTitle>
                                 <AlertDialogDescription className="text-muted-foreground">
@@ -541,3 +541,4 @@ export default function NotesPage() {
     </TooltipProvider>
   );
 }
+

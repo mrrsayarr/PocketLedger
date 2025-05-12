@@ -416,7 +416,7 @@ export default function DebtManagementPage() {
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
       <Toaster />
-      <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+      <header className="flex flex-row justify-between items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
           <Icons.trendingDown className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
           <span className="hidden md:inline">{getDebtTranslation(currentLanguage, "pageTitle")}</span>
@@ -439,7 +439,7 @@ export default function DebtManagementPage() {
                 </DropdownMenuContent>
             </DropdownMenu>
             <Link href="/" passHref>
-            <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+            <Button variant="outline" className="w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
                 <Icons.arrowLeft className="mr-2 h-5 w-5" />
                 {getDebtTranslation(currentLanguage, "backToDashboard")}
             </Button>
@@ -484,7 +484,7 @@ export default function DebtManagementPage() {
                 onValueChange={(value) => setPaymentFrequency(getPaymentFrequencyKeyFromValue(value, currentLanguage))}
             >
               <SelectTrigger className="rounded-lg shadow-inner"><SelectValue placeholder={getDebtTranslation(currentLanguage, "paymentFrequencyPlaceholder")} /></SelectTrigger>
-              <SelectContent className="bg-popover rounded-lg shadow-lg">
+              <SelectContent className="bg-popover rounded-lg shadow-lg z-[51]">
                 {translatedPaymentFrequencyOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -510,7 +510,7 @@ export default function DebtManagementPage() {
                 onValueChange={(value) => setDebtType(getDebtTypeKeyFromValue(value, currentLanguage))}
             >
               <SelectTrigger className="rounded-lg shadow-inner"><SelectValue placeholder={getDebtTranslation(currentLanguage, "debtTypePlaceholder")} /></SelectTrigger>
-              <SelectContent className="bg-popover rounded-lg shadow-lg">
+              <SelectContent className="bg-popover rounded-lg shadow-lg z-[51]">
                 {translatedDebtTypeOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -576,7 +576,7 @@ export default function DebtManagementPage() {
                         <Icons.trash className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md">
+                    <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[51]">
                       <AlertDialogHeader>
                         <AlertDialogTitle>{getDebtTranslation(currentLanguage, "deleteDebtTitle")}</AlertDialogTitle>
                         <AlertDialogDescription>{getDebtTranslation(currentLanguage, "deleteDebtDescription", debt.name)}</AlertDialogDescription>
@@ -690,7 +690,7 @@ export default function DebtManagementPage() {
                 handleCancelEditPayment(); // Reset edit form state when modal closes
             }
         }}>
-          <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl">
+          <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl z-[52]">
             <DialogHeader>
               <DialogTitle className="text-xl">{getDebtTranslation(currentLanguage, "paymentModalTitle", selectedDebtForPayment.name)}</DialogTitle>
               <DialogDesc>

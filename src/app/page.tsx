@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -246,11 +247,10 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode === 'false') { 
-        document.documentElement.classList.remove("dark");
-      } else { 
-        // Default to dark or if value is 'true' or null
+      if (storedDarkMode === 'true') { 
         document.documentElement.classList.add("dark");
+      } else { 
+        document.documentElement.classList.remove("dark");
       }
 
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -454,7 +454,7 @@ export default function Home() {
     <TooltipProvider>
       <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
         <Toaster />
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-6 sm:mb-8 gap-4">
+        <header className="flex flex-row justify-between items-center mb-6 sm:mb-8 gap-4">
           <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center text-center sm:text-left shrink-0">
             <Icons.wallet className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
             <span className="hidden md:inline">PocketLedger Pro</span>
@@ -731,7 +731,7 @@ export default function Home() {
                             <Icons.trash className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
+                        <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[51]">
                           <AlertDialogHeader>
                             <AlertDialogTitle className="text-card-foreground">Delete Transaction?</AlertDialogTitle>
                             <AlertDialogDescription className="text-muted-foreground">
@@ -787,7 +787,7 @@ export default function Home() {
         {/* Edit Transaction Modal */}
         {editingTransaction && (
           <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-            <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl">
+            <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl z-[52]">
               <DialogHeader>
                 <DialogTitle className="text-xl text-card-foreground">Edit Transaction</DialogTitle>
                 <DialogDesc className="text-muted-foreground">
@@ -812,7 +812,7 @@ export default function Home() {
                             {editFormData.date && !isNaN(editFormData.date.getTime()) ? format(editFormData.date, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+                        <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[55]" align="start">
                             <Calendar
                             mode="single"
                             selected={editFormData.date && !isNaN(editFormData.date.getTime()) ? editFormData.date : undefined}
@@ -998,3 +998,4 @@ export default function Home() {
   );
 }
     
+

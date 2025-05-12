@@ -75,7 +75,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
-  const [darkMode, setDarkMode] = useState(false); // Default to light mode
+  const [darkMode, setDarkMode] = useState(false); 
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
 
   const { toast } = useToast();
@@ -139,15 +139,11 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
         const storedDarkMode = localStorage.getItem('darkMode');
-        // If a preference is stored, use it; otherwise, the useState default (false for light) applies.
         if (storedDarkMode === 'true') {
             setDarkMode(true);
             document.documentElement.classList.add('dark');
-        } else if (storedDarkMode === 'false') {
-            setDarkMode(false);
-            document.documentElement.classList.remove('dark');
         } else {
-             // No preference stored, ensure light mode is visually applied (matching useState default)
+            setDarkMode(false);
             document.documentElement.classList.remove('dark');
         }
 
@@ -348,13 +344,13 @@ export default function SettingsPage() {
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
       <Toaster />
-      <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+      <header className="flex flex-row justify-between items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
           <Icons.settings className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
           <span className="hidden md:inline">Application Settings</span>
         </h1>
         <Link href="/" passHref>
-          <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+          <Button variant="outline" className="w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
             <Icons.arrowLeft className="mr-2 h-5 w-5" />
             Back to Dashboard
           </Button>
@@ -453,7 +449,7 @@ export default function SettingsPage() {
             <div className="text-center py-6">
               <Icons.fileText className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
               <p className="text-lg font-medium text-card-foreground">No backups found.</p>
-              <p className="text-sm text-muted-foreground">Backups are created when you reset application data from the main dashboard or settings.</p>
+              <p className="text-sm text-muted-foreground">Backups are created when you reset application data.</p>
             </div>
           )}
           {!isLoading && backups.length > 0 && (
@@ -477,7 +473,7 @@ export default function SettingsPage() {
                           <Icons.refreshCw className="mr-2 h-4 w-4" /> Restore
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
+                      <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[51]">
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-card-foreground">Confirm Restore</AlertDialogTitle>
                           <AlertDialogDescription className="text-muted-foreground">
@@ -504,7 +500,7 @@ export default function SettingsPage() {
                           <Icons.trash className="mr-2 h-4 w-4" /> Delete
                         </Button>
                       </AlertDialogTrigger>
-                      <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[110]">
+                      <AlertDialogContent className="rounded-xl bg-card/90 backdrop-blur-md z-[51]">
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-card-foreground">Confirm Delete Backup</AlertDialogTitle>
                           <AlertDialogDescription className="text-muted-foreground">
@@ -571,3 +567,4 @@ export default function SettingsPage() {
   );
 }
     
+

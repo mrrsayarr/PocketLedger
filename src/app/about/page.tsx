@@ -21,20 +21,20 @@ export default function AboutPage() {
 
   return (
     <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col bg-background/70 backdrop-blur-sm text-foreground">
-      <header className="flex flex-col text-center sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8">
+      <header className="flex flex-row justify-between items-center gap-4 mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-primary flex items-center justify-center sm:justify-start">
           <Icons.info className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
           <span className="hidden md:inline">About PocketLedger Pro</span>
         </h1>
         <div className="flex gap-2">
           <Link href="/settings" passHref>
-            <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+            <Button variant="outline" className="w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
               <Icons.settings className="mr-2 h-5 w-5" />
               Settings
             </Button>
           </Link>
           <Link href="/" passHref>
-            <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+            <Button variant="outline" className="w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
               <Icons.arrowLeft className="mr-2 h-5 w-5" />
               Back to Dashboard
             </Button>
