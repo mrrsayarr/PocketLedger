@@ -62,6 +62,7 @@ import { format } from "date-fns";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { getDebtTranslation, getTranslatedOptions, getDebtTypeKeyFromValue, getPaymentFrequencyKeyFromValue, type Language, debtTranslations } from "./translations";
 import { Textarea } from "@/components/ui/textarea";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 interface Currency {
@@ -546,13 +547,39 @@ export default function DebtManagementPage() {
           <CardDescription>{getDebtTranslation(currentLanguage, "debtReductionStrategiesDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <h3 className="text-lg font-semibold mb-2 text-primary">{getDebtTranslation(currentLanguage, "debtSnowballTitle")}</h3>
-            <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "debtSnowballDescription")}</p>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold mb-2 text-primary">{getDebtTranslation(currentLanguage, "debtAvalancheTitle")}</h3>
-            <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "debtAvalancheDescription")}</p>
+        <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="snowball">
+              <AccordionTrigger className="text-lg font-semibold text-primary hover:no-underline">
+                {getDebtTranslation(currentLanguage, "debtSnowballTitle")}
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3 text-sm text-muted-foreground">
+                <p>{getDebtTranslation(currentLanguage, "debtSnowballDescription")}</p>
+                <h4 className="font-semibold text-card-foreground">{getDebtTranslation(currentLanguage, "strategyHowItWorks")}</h4>
+                <p>{getDebtTranslation(currentLanguage, "snowballHowItWorks")}</p>
+                <h4 className="font-semibold text-card-foreground">{getDebtTranslation(currentLanguage, "strategyPros")}</h4>
+                <p>{getDebtTranslation(currentLanguage, "snowballPros")}</p>
+                <h4 className="font-semibold text-card-foreground">{getDebtTranslation(currentLanguage, "strategyCons")}</h4>
+                <p>{getDebtTranslation(currentLanguage, "snowballCons")}</p>
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="avalanche">
+              <AccordionTrigger className="text-lg font-semibold text-primary hover:no-underline">
+                {getDebtTranslation(currentLanguage, "debtAvalancheTitle")}
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3 text-sm text-muted-foreground">
+                <p>{getDebtTranslation(currentLanguage, "debtAvalancheDescription")}</p>
+                <h4 className="font-semibold text-card-foreground">{getDebtTranslation(currentLanguage, "strategyHowItWorks")}</h4>
+                <p>{getDebtTranslation(currentLanguage, "avalancheHowItWorks")}</p>
+                <h4 className="font-semibold text-card-foreground">{getDebtTranslation(currentLanguage, "strategyPros")}</h4>
+                <p>{getDebtTranslation(currentLanguage, "avalanchePros")}</p>
+                <h4 className="font-semibold text-card-foreground">{getDebtTranslation(currentLanguage, "strategyCons")}</h4>
+                <p>{getDebtTranslation(currentLanguage, "avalancheCons")}</p>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <div className="mt-6 p-4 border border-dashed border-border rounded-lg bg-background/50">
+             <h4 className="font-semibold text-card-foreground mb-2">{getDebtTranslation(currentLanguage, "considerations")}</h4>
+            <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "considerationsText")}</p>
           </div>
           <p className="text-sm text-center py-4 text-muted-foreground">{getDebtTranslation(currentLanguage, "personalizedStrategiesPlaceholder")}</p>
         </CardContent>
