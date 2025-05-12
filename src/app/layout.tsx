@@ -40,23 +40,22 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Script to set theme preference from localStorage */}
+        {/* Script to set theme preference from localStorage, defaulting to light mode */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 try {
                   const storedDarkMode = localStorage.getItem('darkMode');
-                  if (storedDarkMode === 'false') {
-                    // If 'false', remove 'dark' class if present
-                    document.documentElement.classList.remove('dark');
-                  } else { 
-                    // If 'true' or null (not set), add 'dark' class
+                  if (storedDarkMode === 'true') {
                     document.documentElement.classList.add('dark');
+                  } else { 
+                    // If 'false' or null (not set), remove 'dark' class (default to light)
+                    document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {
-                  // Fallback or if localStorage is unavailable, default to adding 'dark'
-                  document.documentElement.classList.add('dark');
+                  // Fallback or if localStorage is unavailable, default to removing 'dark' class (light mode)
+                  document.documentElement.classList.remove('dark');
                 }
               })();
             `,

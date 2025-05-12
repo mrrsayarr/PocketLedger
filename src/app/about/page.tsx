@@ -11,9 +11,9 @@ export default function AboutPage() {
     useEffect(() => {
     if (typeof window !== "undefined") { 
         const storedDarkMode = localStorage.getItem('darkMode');
-        if (storedDarkMode === 'true') { // If 'true', add 'dark' class
+        if (storedDarkMode === 'true') { 
           document.documentElement.classList.add('dark');
-        } else { // If 'false' or null (not set), remove 'dark' class (default to light)
+        } else { 
           document.documentElement.classList.remove('dark');
         }
     }
@@ -123,5 +123,4 @@ export default function AboutPage() {
     </div>
   );
 }
-
 

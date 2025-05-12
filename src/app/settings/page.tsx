@@ -75,7 +75,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
-  const [darkMode, setDarkMode] = useState(true); // Default to dark
+  const [darkMode, setDarkMode] = useState(false); // Default to light mode
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
 
   const { toast } = useToast();
@@ -139,13 +139,18 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
         const storedDarkMode = localStorage.getItem('darkMode');
-        const initialDarkMode = storedDarkMode === 'false' ? false : true; // Default to dark
-        setDarkMode(initialDarkMode);
-        if (initialDarkMode) { 
-          document.documentElement.classList.add('dark');
+        // If a preference is stored, use it; otherwise, the useState default (false for light) applies.
+        if (storedDarkMode === 'true') {
+            setDarkMode(true);
+            document.documentElement.classList.add('dark');
+        } else if (storedDarkMode === 'false') {
+            setDarkMode(false);
+            document.documentElement.classList.remove('dark');
         } else {
-          document.documentElement.classList.remove('dark');
+             // No preference stored, ensure light mode is visually applied (matching useState default)
+            document.documentElement.classList.remove('dark');
         }
+
 
         const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
         if (storedCurrencyCode) {
