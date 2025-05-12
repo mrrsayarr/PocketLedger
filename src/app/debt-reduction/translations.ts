@@ -51,7 +51,12 @@ export const debtTranslations = {
     debtSnowballDescription: "This method focuses on psychological wins. You'll pay off debts starting with the smallest balance first, regardless of interest rate, while making minimum payments on others. Each paid-off debt builds momentum and motivation. Ideal if you need quick wins to stay motivated.",
     debtAvalancheTitle: "2. Debt Avalanche Method",
     debtAvalancheDescription: "This method is mathematically optimal for saving money on interest. You'll prioritize paying off debts with the highest interest rates first, while making minimum payments on others. This approach typically saves you the most money in the long run, though it might take longer to feel progress on smaller debts.",
-    personalizedStrategiesPlaceholder: "[Coming Soon: AI-powered personalized debt reduction strategy recommendations based on your specific situation.]",
+    
+    aiStrategyTitle: "AI-Powered Strategy Recommendation",
+    aiStrategyDescription: "Let our AI analyze your debts and financial situation to suggest the most optimal and personalized payoff plan for you. Get insights beyond generic strategies.",
+    aiStrategyButton: "Get My AI Strategy",
+    aiStrategyComingSoon: "(Coming Soon - AI features under development)",
+
     strategyHowItWorks: "How it works:",
     strategyPros: "Pros:",
     strategyCons: "Cons:",
@@ -161,7 +166,12 @@ export const debtTranslations = {
     debtSnowballDescription: "Bu yöntem psikolojik kazanımlara odaklanır. Diğer borçlara minimum ödeme yaparken, faiz oranına bakılmaksızın en küçük bakiyeli borçtan başlayarak ödeme yaparsınız. Ödenen her borç, momentum ve motivasyon oluşturur. Motive kalmak için hızlı kazanımlara ihtiyacınız varsa idealdir.",
     debtAvalancheTitle: "2. Borç Çığ Yöntemi (Debt Avalanche)",
     debtAvalancheDescription: "Bu yöntem, faizden tasarruf etmek için matematiksel olarak en uygun olanıdır. Diğer borçlara minimum ödeme yaparken, en yüksek faiz oranına sahip borçları önceliklendirerek ödeme yaparsınız. Bu yaklaşım genellikle uzun vadede size en fazla parayı tasarruf ettirir, ancak küçük borçlarda ilerlemeyi hissetmek daha uzun sürebilir.",
-    personalizedStrategiesPlaceholder: "[Yakında: Durumunuza özel yapay zeka destekli kişiselleştirilmiş borç azaltma stratejisi önerileri.]",
+    
+    aiStrategyTitle: "Yapay Zeka Destekli Strateji Önerisi",
+    aiStrategyDescription: "Yapay zekamızın borçlarınızı ve mali durumunuzu analiz ederek size en uygun ve kişiselleştirilmiş ödeme planını önermesine izin verin. Genel stratejilerin ötesinde bilgiler edinin.",
+    aiStrategyButton: "Yapay Zeka Stratejimi Al",
+    aiStrategyComingSoon: "(Yakında - Yapay zeka özellikleri geliştirme aşamasındadır)",
+
     strategyHowItWorks: "Nasıl Çalışır:",
     strategyPros: "Artıları:",
     strategyCons: "Eksileri:",
@@ -242,6 +252,14 @@ const getKeyFromTranslatedValue = (
         }
     }
     // Fallback if no match is found (should ideally not happen if value is from translated options)
+    // Try to find by English value if current language is not English and value matches an English value
+    if (lang !== 'en') {
+        for (const keyInEnglish in englishSet) {
+            if (englishSet[keyInEnglish as keyof typeof englishSet] === value) {
+                return keyInEnglish;
+            }
+        }
+    }
     return Object.keys(englishSet)[0]; 
 };
 
@@ -267,6 +285,7 @@ export const getDebtTranslation = (lang: Language, key: TranslationKey, ...args:
     translationFunctionOrString = fallbackLangSet[key as keyof typeof fallbackLangSet];
   } else {
     // If key is not found in either, return the key itself as a fallback
+    console.warn(`Translation key "${String(key)}" not found for language "${lang}".`);
     return String(key);
   }
 
@@ -282,6 +301,10 @@ export const getTranslatedOptions = (lang: Language, category: 'debtTypes' | 'pa
     const primaryLangSet = debtTranslations[lang]?.[category];
     const fallbackLangSet = debtTranslations.en[category];
     const optionsSet = primaryLangSet || fallbackLangSet;
+    if (!optionsSet) {
+        console.warn(`Options category "${category}" not found for language "${lang}" or fallback "en".`);
+        return [];
+    }
     return Object.values(optionsSet);
 };
 

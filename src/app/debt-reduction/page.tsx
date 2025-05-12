@@ -31,9 +31,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
+  DialogDescription as DialogDesc, // Renamed to avoid conflict
   DialogFooter,
-  DialogTrigger,
   DialogClose,
 } from "@/components/ui/dialog";
 import {
@@ -419,7 +418,7 @@ export default function DebtManagementPage() {
                   {nextDueDate ? format(nextDueDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+              <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[51]" align="start">
                 <Calendar mode="single" selected={nextDueDate} onSelect={setNextDueDate} initialFocus />
               </PopoverContent>
             </Popover>
@@ -445,7 +444,7 @@ export default function DebtManagementPage() {
                   {startDate ? format(startDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
+              <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[51]" align="start">
                 <Calendar mode="single" selected={startDate} onSelect={setStartDate} />
               </PopoverContent>
             </Popover>
@@ -581,7 +580,25 @@ export default function DebtManagementPage() {
              <h4 className="font-semibold text-card-foreground mb-2">{getDebtTranslation(currentLanguage, "considerations")}</h4>
             <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "considerationsText")}</p>
           </div>
-          <p className="text-sm text-center py-4 text-muted-foreground">{getDebtTranslation(currentLanguage, "personalizedStrategiesPlaceholder")}</p>
+           <Card data-ai-hint="finance planning" className="bg-primary/5 p-6 rounded-lg shadow-sm border border-primary/20">
+            <CardHeader className="p-0 mb-3">
+                <CardTitle className="text-lg font-semibold text-primary flex items-center">
+                    <Icons.sparkles className="mr-2 h-5 w-5 text-primary" /> 
+                    {getDebtTranslation(currentLanguage, "aiStrategyTitle")}
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+                <p className="text-sm text-muted-foreground mb-4">
+                    {getDebtTranslation(currentLanguage, "aiStrategyDescription")}
+                </p>
+                <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-sm border-primary/30 text-primary hover:bg-primary/10">
+                    <Icons.wand2 className="mr-2 h-4 w-4" /> {getDebtTranslation(currentLanguage, "aiStrategyButton")}
+                </Button>
+                <p className="text-xs text-muted-foreground/70 mt-3 text-center">
+                    {getDebtTranslation(currentLanguage, "aiStrategyComingSoon")}
+                </p>
+            </CardContent>
+        </Card>
         </CardContent>
       </Card>
 
@@ -593,9 +610,9 @@ export default function DebtManagementPage() {
           <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl">
             <DialogHeader>
               <DialogTitle className="text-xl">{getDebtTranslation(currentLanguage, "paymentModalTitle", selectedDebtForPayment.name)}</DialogTitle>
-              <DialogDescription>
+              <DialogDesc>
                 {getDebtTranslation(currentLanguage, "remainingBalance")}: {currencySymbol}{selectedDebtForPayment.currentBalance.toFixed(2)}
-              </DialogDescription>
+              </DialogDesc>
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
               <Card>
@@ -614,7 +631,9 @@ export default function DebtManagementPage() {
                           {paymentDate ? format(paymentDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg"><Calendar mode="single" selected={paymentDate} onSelect={setPaymentDate} initialFocus /></PopoverContent>
+                      <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[51]" align="start">
+                        <Calendar mode="single" selected={paymentDate} onSelect={setPaymentDate} initialFocus />
+                      </PopoverContent>
                     </Popover>
                   </div>
                   <div>
