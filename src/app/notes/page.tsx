@@ -98,10 +98,11 @@ export default function NotesPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
         const storedDarkMode = localStorage.getItem('darkMode');
-        if (storedDarkMode === 'true') {
-            document.documentElement.classList.add('dark');
+        // Default to dark if not 'false'
+        if (storedDarkMode === 'false') {
+            document.documentElement.classList.remove('dark');
         } else {
-            document.documentElement.classList.remove('dark'); // Default to light
+            document.documentElement.classList.add('dark'); 
         }
 
         const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");

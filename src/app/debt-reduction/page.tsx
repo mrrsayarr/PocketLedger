@@ -148,10 +148,11 @@ export default function DebtManagementPage() {
   useEffect(() => {
     if (typeof window !== "undefined") {
       const storedDarkMode = localStorage.getItem("darkMode");
-      if (storedDarkMode === 'true') {
-        document.documentElement.classList.add("dark");
+      // Default to dark if not 'false'
+      if (storedDarkMode === 'false') {
+        document.documentElement.classList.remove("dark");
       } else {
-        document.documentElement.classList.remove("dark"); 
+        document.documentElement.classList.add("dark"); 
       }
 
       const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
@@ -183,7 +184,7 @@ export default function DebtManagementPage() {
       }
       setIsLoading(false);
     }
-  }, []); 
+  }, [currentLanguage]); 
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isLoading) {

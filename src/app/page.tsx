@@ -31,7 +31,6 @@ import {
   Legend,
   Tooltip as RechartsTooltip,
 } from "recharts";
-import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
   addTransactionToDb,
@@ -41,7 +40,6 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
-  backupAndResetAllData,
 } from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
@@ -64,7 +62,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import SlideToConfirmButton from '@/components/ui/slide-to-confirm-button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,6 +131,7 @@ const CustomTooltip = ({ active, payload, currencySymbol }: { active?: boolean; 
       if (percentScaled === 0) {
         displayPercentText = "0.00";
       } else if (percentScaled > 0 && percentScaled.toFixed(2) === "0.00" && percentScaled !== 0) {
+        // For very small non-zero percentages, show more precision
         displayPercentText = percentScaled.toFixed(Math.max(2, -Math.floor(Math.log10(percentScaled)) + 1 )); 
       } else {
         displayPercentText = percentScaled.toFixed(2);
@@ -167,7 +165,6 @@ export default function Home() {
   const [type, setType] = useState<"income" | "expense">("expense");
   const [notesInput, setNotesInput] = useState<string>("");
   
-  const [darkMode, setDarkMode] = useState(false); // Default to light mode
   const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currencies.find(c => c.code === 'TRY') || currencies[0]);
 
   const [currentBalance, setCurrentBalance] = useState(0);
@@ -217,9 +214,7 @@ export default function Home() {
  useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedDarkMode = localStorage.getItem("darkMode");
-      // Default to light mode if no setting is found or if it's not explicitly 'true'
-      const initialDarkMode = storedDarkMode === 'true'; 
-      setDarkMode(initialDarkMode);
+      const initialDarkMode = storedDarkMode === 'false' ? false : true; // Default to dark if not 'false'
       if (initialDarkMode) {
         document.documentElement.classList.add("dark");
       } else {
@@ -239,17 +234,6 @@ export default function Home() {
     loadInitialData();
   }, [loadInitialData]);
 
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem("darkMode", darkMode.toString());
-      if (darkMode) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
-    }
-  }, [darkMode]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -335,10 +319,6 @@ export default function Home() {
     await loadDashboardData();
   };
 
-  const toggleDarkMode = () => {
-    setDarkMode((prevMode) => !prevMode);
-  };
-
   const handleCurrencyChange = (currency: Currency) => {
     setSelectedCurrency(currency);
     toast({
@@ -346,62 +326,6 @@ export default function Home() {
       description: `Display currency changed to ${currency.name} (${currency.code}).`,
     });
   };
-
-  const handleResetData = useCallback(async () => {
-    try {
-      const backupId = await backupAndResetAllData();
-      const notesData = localStorage.getItem("financialNotes");
-      if (notesData) {
-        localStorage.setItem(`financialNotes_backup_${backupId}`, notesData);
-      }
-      localStorage.removeItem("financialNotes");
-      const debtData = localStorage.getItem("pocketLedgerDebts");
-      if (debtData) {
-        localStorage.setItem(`pocketLedgerDebts_backup_${backupId}`, debtData);
-      }
-      localStorage.removeItem("pocketLedgerDebts");
-
-      toast({
-        title: "Data Reset & Backed Up!",
-        description: "All data has been reset. You can restore from Settings.",
-        duration: 5000,
-      });
-      await loadInitialData();
-    } catch (error: any) {
-      console.error("Error resetting data:", error);
-      toast({
-        title: "Error Resetting Data",
-        description: error.message || "Could not reset data. Please try again.",
-        variant: "destructive",
-      });
-    }
-  }, [toast, loadInitialData]);
-
-  useEffect(() => {
-    const pressedKeys = new Set<string>();
-    const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key.toLowerCase() !== 'control' && event.key.toLowerCase() !== 'shift' && event.key.toLowerCase() !== 'alt' && event.key.toLowerCase() !== 'meta') {
-            pressedKeys.add(event.key.toLowerCase());
-        }
-        if (event.shiftKey && pressedKeys.has('s') && pressedKeys.has('d')) {
-            if (event.key.toLowerCase() === 's' || event.key.toLowerCase() === 'd') {
-                event.preventDefault(); 
-                handleResetData(); 
-                pressedKeys.delete('s');
-                pressedKeys.delete('d');
-            }
-        }
-    };
-    const handleKeyUp = (event: KeyboardEvent) => {
-        pressedKeys.delete(event.key.toLowerCase());
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    return () => {
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, [handleResetData]);
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -447,44 +371,8 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Currency Dropdown */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-lg shadow-md hover:bg-primary/10 transition-all text-xs sm:text-sm px-3 py-1.5 h-9">
-                  <Icons.coins className="mr-1 h-4 w-4" /> {selectedCurrency.code}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-card/90 backdrop-blur-md rounded-xl shadow-lg">
-                <DropdownMenuLabel className="text-card-foreground">Select Currency</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {currencies.map((currency) => (
-                  <DropdownMenuItem
-                    key={currency.code}
-                    onClick={() => handleCurrencyChange(currency)}
-                    className={cn(
-                      "text-card-foreground hover:bg-primary/10",
-                      selectedCurrency.code === currency.code && "bg-primary/20 font-semibold"
-                    )}
-                  >
-                    {currency.symbol} {currency.name} ({currency.code})
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Theme Toggle */}
-            <div className="flex items-center space-x-1">
-              <Label htmlFor="dark-mode-toggle-main" className="text-sm font-medium text-foreground sr-only sm:not-sr-only">
-                {darkMode ? <Icons.moon className="h-5 w-5" /> : <Icons.sun className="h-5 w-5" />}
-              </Label>
-              <Switch
-                id="dark-mode-toggle-main"
-                checked={darkMode}
-                onCheckedChange={toggleDarkMode}
-                className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted shadow-inner rounded-full"
-                aria-label="Toggle dark mode"
-              />
-            </div>
+            {/* Currency Selector - Moved to Settings Page */}
+            {/* Theme Toggle - Moved to Settings Page */}
 
             {/* Mobile Menu */}
             <div className="md:hidden">
@@ -504,6 +392,12 @@ export default function Home() {
                   <DropdownMenuItem asChild>
                     <Link href="/debt-reduction" className="flex items-center w-full px-2 py-1.5 text-sm">
                       <Icons.trendingDown className="mr-2 h-4 w-4" /> Debt Plans
+                    </Link>
+                  </DropdownMenuItem>
+                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                     <Link href="/settings" className="flex items-center w-full px-2 py-1.5 text-sm">
+                       <Icons.settings className="mr-2 h-4 w-4" /> Settings
                     </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -847,35 +741,7 @@ export default function Home() {
               </Button>
             </Link>
             
-            <SlideToConfirmButton
-              onConfirm={handleResetData}
-              buttonText="Erase All Application Data"
-              slideText="Slide to Erase All Data"
-              icon={<Icons.alertTriangle className="h-5 w-5 transition-transform group-hover:scale-110 duration-200 ease-out" />}
-              confirmedText="All Data Erased!"
-            />
-
-            <p className="text-xs text-muted-foreground/80">
-              (Tip: Press Shift + S + D to reset data without confirmation)
-            </p>
-            <div className="w-full border-t border-gray-300 dark:border-gray-700 pt-6 mt-2 bg-card/80 shadow-md rounded-lg">
-              <div className="flex flex-wrap justify-center space-x-2 sm:space-x-4 mb-2 sm:mb-4">
-                <Link href="/about" passHref>
-                  <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 transition duration-300 ease-in-out transform hover:scale-105">
-                    About (EN)
-                  </Button>
-                </Link>
-                <Link href="/about-tr" passHref>
-                  <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 transition duration-300 ease-in-out transform hover:scale-105">
-                    Hakkında (TR)
-                  </Button>
-                </Link>
-                <Link href="/about-es" passHref>
-                  <Button variant="link" className="text-primary hover:underline text-xs sm:text-sm px-2 py-1 sm:px-3 sm:py-2 transition duration-300 ease-in-out transform hover:scale-105">
-                    Acerca de (ES)
-                  </Button>
-                </Link>
-              </div>
+            <div className="w-full border-t border-border/30 pt-6 mt-2">
               <p className="text-xs sm:text-sm text-muted-foreground text-center">
                 © {new Date().getFullYear()} PocketLedger Pro. All rights reserved.
               </p>
@@ -887,4 +753,3 @@ export default function Home() {
   );
 }
     
-

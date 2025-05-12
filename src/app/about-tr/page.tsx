@@ -9,14 +9,13 @@ import { useEffect } from "react";
 
 export default function AboutTrPage() {
     useEffect(() => {
-    // Tema senkronizasyonu
     const storedDarkMode = localStorage.getItem('darkMode');
     if (typeof window !== "undefined") { // Ensure this runs client-side
-        if (storedDarkMode === 'true') { 
-          document.documentElement.classList.add('dark');
-        } else { 
-          // Default to light if 'false' or null (not set)
+         // Default to dark if not 'false'
+        if (storedDarkMode === 'false') {
           document.documentElement.classList.remove('dark');
+        } else { 
+          document.documentElement.classList.add('dark');
         }
     }
   }, []);
@@ -28,12 +27,20 @@ export default function AboutTrPage() {
           <Icons.info className="h-8 w-8 sm:h-10 sm:w-10 md:mr-2" />
           <span className="hidden md:inline">PocketLedger Pro Hakkında</span>
         </h1>
-        <Link href="/" passHref>
-          <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
-            <Icons.arrowLeft className="mr-2 h-5 w-5" />
-            Gösterge Paneline Geri Dön
-          </Button>
-        </Link>
+         <div className="flex gap-2">
+          <Link href="/settings" passHref>
+            <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+              <Icons.settings className="mr-2 h-5 w-5" />
+              Ayarlar
+            </Button>
+          </Link>
+          <Link href="/" passHref>
+            <Button variant="outline" className="w-full sm:w-auto rounded-lg shadow-md hover:bg-primary/10 transition-all">
+              <Icons.arrowLeft className="mr-2 h-5 w-5" />
+              Gösterge Paneline Geri Dön
+            </Button>
+          </Link>
+        </div>
       </header>
 
       <div className="space-y-6 sm:space-y-8">
