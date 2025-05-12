@@ -31,7 +31,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription as DialogDesc, // Renamed to avoid conflict
+  DialogDescription as DialogDesc, 
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -91,7 +91,7 @@ export type Debt = {
   lender: string;
   initialAmount: number;
   currentBalance: number;
-  interestRate?: number; // Annual percentage
+  interestRate?: number; 
   minimumPayment: number;
   paymentFrequency:
     | "Monthly"
@@ -123,7 +123,6 @@ export default function DebtManagementPage() {
   const [currencySymbol, setCurrencySymbol] = useState("₺");
   const [currentLanguage, setCurrentLanguage] = useState<Language>("en");
 
-  // New Debt Form State
   const [debtName, setDebtName] = useState("");
   const [lender, setLender] = useState("");
   const [initialAmount, setInitialAmount] = useState<string>("");
@@ -136,13 +135,25 @@ export default function DebtManagementPage() {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [debtNotes, setDebtNotes] = useState("");
 
-  // Payment Modal State
   const [selectedDebtForPayment, setSelectedDebtForPayment] = useState<Debt | null>(null);
   const [paymentAmount, setPaymentAmount] = useState<string>("");
   const [paymentDate, setPaymentDate] = useState<Date | undefined>(new Date());
   const [paymentNotes, setPaymentNotes] = useState("");
   
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isEditPaymentMode, setIsEditPaymentMode] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+
+
+  const recalculateDebtBalance = useCallback((debt: Debt): Debt => {
+    const totalPaid = debt.payments.reduce((sum, p) => sum + p.amountPaid, 0);
+    const newBalance = debt.initialAmount - totalPaid;
+    return {
+      ...debt,
+      currentBalance: Math.max(0, newBalance),
+      isPaidOff: Math.max(0, newBalance) <= 0.001, // Handle potential float inaccuracies
+    };
+  }, []);
 
 
   useEffect(() => {
@@ -162,13 +173,16 @@ export default function DebtManagementPage() {
       if (storedDebts) {
         try {
           setDebts(
-            JSON.parse(storedDebts).map((debt: any) => ({
-              ...debt,
-              nextDueDate: new Date(debt.nextDueDate),
-              startDate: debt.startDate ? new Date(debt.startDate) : undefined,
-              createdAt: new Date(debt.createdAt),
-              payments: debt.payments.map((p: any) => ({...p, paymentDate: new Date(p.paymentDate)})),
-            }))
+            JSON.parse(storedDebts).map((debt: any) => {
+              const parsedDebt = {
+                ...debt,
+                nextDueDate: new Date(debt.nextDueDate),
+                startDate: debt.startDate ? new Date(debt.startDate) : undefined,
+                createdAt: new Date(debt.createdAt),
+                payments: debt.payments.map((p: any) => ({...p, paymentDate: new Date(p.paymentDate)})),
+              };
+              return recalculateDebtBalance(parsedDebt); // Recalculate on load
+            })
           );
         } catch (error) {
           console.error(getDebtTranslation(currentLanguage, "toastLoadingError"), error);
@@ -179,11 +193,11 @@ export default function DebtManagementPage() {
       if (storedLang && debtTranslations[storedLang]) {
         setCurrentLanguage(storedLang);
       } else {
-        setCurrentLanguage("en"); // Default to English if no preference or invalid preference
+        setCurrentLanguage("en");
       }
       setIsLoading(false);
     }
-  }, [currentLanguage]); 
+  }, [currentLanguage, recalculateDebtBalance]); 
 
   useEffect(() => {
     if (typeof window !== "undefined" && !isLoading) {
@@ -227,12 +241,12 @@ export default function DebtManagementPage() {
         return;
     }
     
-    const newDebt: Debt = {
+    let newDebt: Debt = {
       id: Date.now().toString(),
       name: debtName,
       lender,
       initialAmount: parsedInitialAmount,
-      currentBalance: parsedCurrentBalance,
+      currentBalance: parsedCurrentBalance, // Will be recalculated if payments exist, but for new debt, this is fine.
       interestRate: parsedInterestRate,
       minimumPayment: parsedMinimumPayment,
       paymentFrequency, 
@@ -244,6 +258,7 @@ export default function DebtManagementPage() {
       createdAt: new Date(),
       isPaidOff: false,
     };
+    newDebt = recalculateDebtBalance(newDebt); // Ensure consistent state
     setDebts(prev => [newDebt, ...prev.filter(d => !d.isPaidOff), ...prev.filter(d => d.isPaidOff)]);
     resetDebtForm();
     toast({ title: getDebtTranslation(currentLanguage, "toastDebtAddedTitle"), description: getDebtTranslation(currentLanguage, "toastDebtAddedDescription", debtName) });
@@ -253,67 +268,132 @@ export default function DebtManagementPage() {
     setDebts(prev => prev.filter(d => d.id !== debtId));
     toast({ title: getDebtTranslation(currentLanguage, "toastDebtDeletedTitle"), variant: "destructive" });
   };
-
+  
   const handleOpenPaymentModal = (debt: Debt) => {
     setSelectedDebtForPayment(debt);
-    setPaymentAmount(debt.minimumPayment.toString()); 
+    setIsEditPaymentMode(false);
+    setEditingPaymentId(null);
+    setPaymentAmount(debt.minimumPayment > 0 ? debt.minimumPayment.toString() : ""); 
     setPaymentDate(new Date());
     setPaymentNotes("");
     setIsPaymentModalOpen(true);
   };
+
+  const handleOpenEditPaymentForm = (payment: DebtPayment) => {
+    if (!selectedDebtForPayment) return;
+    setIsEditPaymentMode(true);
+    setEditingPaymentId(payment.id);
+    setPaymentAmount(payment.amountPaid.toString());
+    setPaymentDate(new Date(payment.paymentDate));
+    setPaymentNotes(payment.notes || "");
+  };
+
+  const handleCancelEditPayment = () => {
+    setIsEditPaymentMode(false);
+    setEditingPaymentId(null);
+    if (selectedDebtForPayment) {
+      setPaymentAmount(selectedDebtForPayment.minimumPayment > 0 ? selectedDebtForPayment.minimumPayment.toString() : "");
+    } else {
+      setPaymentAmount("");
+    }
+    setPaymentDate(new Date());
+    setPaymentNotes("");
+  };
   
-  const handleAddPayment = () => {
+  const handleSaveOrUpdatePayment = () => {
     if (!selectedDebtForPayment || !paymentAmount || !paymentDate) {
       toast({ title: getDebtTranslation(currentLanguage, "toastErrorTitle"), description: getDebtTranslation(currentLanguage, "toastPaymentAmountDateRequired"), variant: "destructive" });
       return;
     }
     const parsedPaymentAmount = parseFloat(paymentAmount);
-     if (isNaN(parsedPaymentAmount) || parsedPaymentAmount <= 0) {
+    if (isNaN(parsedPaymentAmount) || parsedPaymentAmount <= 0) {
       toast({ title: getDebtTranslation(currentLanguage, "toastErrorTitle"), description: getDebtTranslation(currentLanguage, "toastValidPositivePayment"), variant: "destructive" });
       return;
     }
 
-    const newPayment: DebtPayment = {
-      id: Date.now().toString(),
-      paymentDate,
-      amountPaid: parsedPaymentAmount,
-      notes: paymentNotes,
-    };
-
-    setDebts(prevDebts => prevDebts.map(debt => {
-      if (debt.id === selectedDebtForPayment.id) {
-        const updatedBalance = Math.max(0, debt.currentBalance - parsedPaymentAmount);
-        return {
-          ...debt,
-          currentBalance: updatedBalance,
-          payments: [...debt.payments, newPayment],
-          isPaidOff: updatedBalance === 0 ? true : debt.isPaidOff,
-        };
-      }
-      return debt;
-    }));
-    
-    toast({ title: getDebtTranslation(currentLanguage, "toastPaymentAddedTitle"), description: getDebtTranslation(currentLanguage, "toastPaymentAddedDescription", currencySymbol, parsedPaymentAmount, selectedDebtForPayment.name) });
-    setIsPaymentModalOpen(false); 
-    setSelectedDebtForPayment(null); 
+    if (isEditPaymentMode && editingPaymentId) {
+      // Update existing payment
+      setDebts(prevDebts => prevDebts.map(d => {
+        if (d.id === selectedDebtForPayment.id) {
+          const updatedPayments = d.payments.map(p =>
+            p.id === editingPaymentId
+              ? { ...p, amountPaid: parsedPaymentAmount, paymentDate, notes: paymentNotes }
+              : p
+          );
+          const updatedDebtWithPayments = { ...d, payments: updatedPayments };
+          const fullyRecalculatedDebt = recalculateDebtBalance(updatedDebtWithPayments);
+          if (selectedDebtForPayment?.id === fullyRecalculatedDebt.id) {
+            setSelectedDebtForPayment(fullyRecalculatedDebt);
+          }
+          return fullyRecalculatedDebt;
+        }
+        return d;
+      }));
+      toast({ title: getDebtTranslation(currentLanguage, "paymentUpdatedTitle"), description: getDebtTranslation(currentLanguage, "paymentUpdatedDesc", selectedDebtForPayment.name) });
+      handleCancelEditPayment(); // Reset form state
+    } else {
+      // Add new payment
+      const newPayment: DebtPayment = {
+        id: Date.now().toString(),
+        paymentDate,
+        amountPaid: parsedPaymentAmount,
+        notes: paymentNotes,
+      };
+      setDebts(prevDebts => prevDebts.map(d => {
+        if (d.id === selectedDebtForPayment.id) {
+          const updatedDebtWithPayments = { ...d, payments: [...d.payments, newPayment] };
+          const fullyRecalculatedDebt = recalculateDebtBalance(updatedDebtWithPayments);
+           if (selectedDebtForPayment?.id === fullyRecalculatedDebt.id) {
+            setSelectedDebtForPayment(fullyRecalculatedDebt);
+          }
+          return fullyRecalculatedDebt;
+        }
+        return d;
+      }));
+      toast({ title: getDebtTranslation(currentLanguage, "toastPaymentAddedTitle"), description: getDebtTranslation(currentLanguage, "toastPaymentAddedDescription", currencySymbol, parsedPaymentAmount, selectedDebtForPayment.name) });
+      // Reset form for next new payment
+      setPaymentAmount(selectedDebtForPayment.minimumPayment > 0 ? selectedDebtForPayment.minimumPayment.toString() : "");
+      setPaymentDate(new Date());
+      setPaymentNotes("");
+    }
   };
+
+  const handleDeletePayment = (paymentToDeleteId: string) => {
+    if (!selectedDebtForPayment) return;
+
+    setDebts(prevDebts => prevDebts.map(d => {
+      if (d.id === selectedDebtForPayment.id) {
+        const updatedPayments = d.payments.filter(p => p.id !== paymentToDeleteId);
+        const updatedDebtWithPayments = { ...d, payments: updatedPayments };
+        const fullyRecalculatedDebt = recalculateDebtBalance(updatedDebtWithPayments);
+        if (selectedDebtForPayment?.id === fullyRecalculatedDebt.id) {
+            setSelectedDebtForPayment(fullyRecalculatedDebt);
+        }
+        return fullyRecalculatedDebt;
+      }
+      return d;
+    }));
+    toast({ title: getDebtTranslation(currentLanguage, "paymentDeletedTitle"), description: getDebtTranslation(currentLanguage, "paymentDeletedDesc"), variant: "destructive" });
+  };
+
 
   const handleMarkAsPaid = (debtId: string) => {
     setDebts(prevDebts => {
       const updatedDebts = prevDebts.map(debt =>
         debt.id === debtId ? { ...debt, isPaidOff: true, currentBalance: 0 } : debt
-      );
+      ); // currentBalance set to 0 explicitly
       return [...updatedDebts.filter(d => !d.isPaidOff), ...updatedDebts.filter(d => d.isPaidOff)];
     });
     toast({ title: getDebtTranslation(currentLanguage, "toastDebtStatusUpdatedTitle"), description: getDebtTranslation(currentLanguage, "toastDebtMarkedAsPaid") });
+    setIsPaymentModalOpen(false); // Close modal after marking as paid
   };
+
 
   const activeDebts = useMemo(() => debts.filter(d => !d.isPaidOff), [debts]);
   const paidDebts = useMemo(() => debts.filter(d => d.isPaidOff), [debts]);
 
   const totalRemainingDebt = useMemo(() => activeDebts.reduce((sum, debt) => sum + debt.currentBalance, 0), [activeDebts]);
   const totalMinimumMonthlyPayment = useMemo(() => activeDebts.filter(d=> d.paymentFrequency === "Monthly").reduce((sum, debt) => sum + debt.minimumPayment, 0), [activeDebts]);
-  const totalMinimumWeeklyPayment = useMemo(() => activeDebts.filter(d=> d.paymentFrequency === "Weekly").reduce((sum, debt) => sum + debt.minimumPayment, 0), [activeDebts]);
 
 
   const translatedDebtTypeOptions = useMemo(() => getTranslatedOptions(currentLanguage, 'debtTypes'), [currentLanguage]);
@@ -324,7 +404,7 @@ export default function DebtManagementPage() {
     return (
       <div className="container mx-auto p-4 sm:p-6 md:p-8 min-h-screen flex flex-col items-center justify-center bg-background/70 backdrop-blur-sm">
         <Icons.loader className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4 text-lg text-foreground">Loading debt information...</p>
+        <p className="mt-4 text-lg text-foreground">{getDebtTranslation(currentLanguage, "loadingDebts")}</p>
       </div>
     );
   }
@@ -480,9 +560,9 @@ export default function DebtManagementPage() {
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <p>{getDebtTranslation(currentLanguage, "remainingBalance")}: <span className="font-bold text-lg text-destructive">{currencySymbol}{debt.currentBalance.toFixed(2)}</span></p>
-                  <Progress value={(debt.initialAmount - debt.currentBalance) / debt.initialAmount * 100} className="h-2 my-1" />
+                  <Progress value={debt.initialAmount > 0 ? (debt.initialAmount - debt.currentBalance) / debt.initialAmount * 100 : 0} className="h-2 my-1" />
                   <p>{getDebtTranslation(currentLanguage, "minPayment")}: {currencySymbol}{debt.minimumPayment.toFixed(2)} ({debtTranslations[currentLanguage]?.paymentFrequencies[debt.paymentFrequency] || debt.paymentFrequency})</p>
-                  <p>{getDebtTranslation(currentLanguage, "nextDueDateLabel")}: <span className={cn(new Date(debt.nextDueDate) < new Date() && "text-destructive font-bold")}>{format(new Date(debt.nextDueDate), "PPP")}</span></p>
+                  <p>{getDebtTranslation(currentLanguage, "nextDueDateLabel")}: <span className={cn(new Date(debt.nextDueDate) < new Date() && !debt.isPaidOff && "text-destructive font-bold")}>{format(new Date(debt.nextDueDate), "PPP")}</span></p>
                   {debt.interestRate !== undefined && <p>{getDebtTranslation(currentLanguage, "interestRate")}: {debt.interestRate.toFixed(2)}%</p>}
                   <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "addedOn")}: {format(new Date(debt.createdAt), "PP")}</p>
                 </CardContent>
@@ -531,7 +611,7 @@ export default function DebtManagementPage() {
                     <p className="text-green-600 dark:text-green-400 font-bold">{getDebtTranslation(currentLanguage, "fullyPaid")}</p>
                     <p>{getDebtTranslation(currentLanguage, "initialAmount")}: {currencySymbol}{debt.initialAmount.toFixed(2)}</p>
                      <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "addedOn")}: {format(new Date(debt.createdAt), "PP")}</p>
-                     {debt.payments.length > 0 && <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "lastPayment")}: {format(new Date(debt.payments[debt.payments.length-1].paymentDate), "PP")}</p>}
+                     {debt.payments.length > 0 && <p className="text-xs text-muted-foreground">{getDebtTranslation(currentLanguage, "lastPaymentOn")}: {format(new Date(debt.payments.reduce((latest, p) => new Date(p.paymentDate) > new Date(latest.paymentDate) ? p : latest).paymentDate), "PP")}</p>}
                   </CardContent>
                 </Card>
               ))}
@@ -605,7 +685,10 @@ export default function DebtManagementPage() {
       {selectedDebtForPayment && (
         <Dialog open={isPaymentModalOpen} onOpenChange={(isOpen) => {
             setIsPaymentModalOpen(isOpen);
-            if (!isOpen) setSelectedDebtForPayment(null);
+            if (!isOpen) {
+                setSelectedDebtForPayment(null);
+                handleCancelEditPayment(); // Reset edit form state when modal closes
+            }
         }}>
           <DialogContent className="sm:max-w-[525px] bg-card/90 backdrop-blur-md rounded-xl shadow-xl">
             <DialogHeader>
@@ -616,7 +699,11 @@ export default function DebtManagementPage() {
             </DialogHeader>
             <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
               <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-md">{getDebtTranslation(currentLanguage, "addPaymentCardTitle")}</CardTitle></CardHeader>
+                <CardHeader className="pb-2">
+                    <CardTitle className="text-md">
+                        {isEditPaymentMode ? getDebtTranslation(currentLanguage, "editPaymentTitle") : getDebtTranslation(currentLanguage, "addPaymentCardTitle")}
+                    </CardTitle>
+                </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
                     <Label htmlFor="paymentAmount">{getDebtTranslation(currentLanguage, "paymentAmountLabel")} ({currencySymbol})</Label>
@@ -631,7 +718,7 @@ export default function DebtManagementPage() {
                           {paymentDate ? format(paymentDate, "PPP") : <span>{getDebtTranslation(currentLanguage, "pickDate")}</span>}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[51]" align="start">
+                      <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg z-[55]" align="start"> {/* Increased z-index */}
                         <Calendar mode="single" selected={paymentDate} onSelect={setPaymentDate} initialFocus />
                       </PopoverContent>
                     </Popover>
@@ -640,7 +727,15 @@ export default function DebtManagementPage() {
                     <Label htmlFor="paymentNotes">{getDebtTranslation(currentLanguage, "paymentNotesLabel")}</Label>
                     <Textarea id="paymentNotes" value={paymentNotes} onChange={e => setPaymentNotes(e.target.value)} placeholder={getDebtTranslation(currentLanguage, "paymentNotesPlaceholder")} className="rounded-lg shadow-inner min-h-[60px]" />
                   </div>
-                  <Button onClick={handleAddPayment} className="w-full rounded-lg shadow-md bg-primary hover:bg-primary/90"><Icons.checkCircle className="mr-2 h-5 w-5" /> {getDebtTranslation(currentLanguage, "savePaymentButton")}</Button>
+                  <Button onClick={handleSaveOrUpdatePayment} className="w-full rounded-lg shadow-md bg-primary hover:bg-primary/90">
+                    <Icons.checkCircle className="mr-2 h-5 w-5" /> 
+                    {isEditPaymentMode ? getDebtTranslation(currentLanguage, "updatePaymentButton") : getDebtTranslation(currentLanguage, "savePaymentButton")}
+                  </Button>
+                  {isEditPaymentMode && (
+                    <Button variant="outline" onClick={handleCancelEditPayment} className="w-full rounded-lg shadow-md">
+                        {getDebtTranslation(currentLanguage, "cancelEditButton")}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
               
@@ -648,11 +743,42 @@ export default function DebtManagementPage() {
                 <CardHeader className="pb-2"><CardTitle className="text-md">{getDebtTranslation(currentLanguage, "paymentHistoryCardTitle")}</CardTitle></CardHeader>
                 <CardContent>
                   {selectedDebtForPayment.payments.length === 0 ? <p className="text-sm text-muted-foreground">{getDebtTranslation(currentLanguage, "noPaymentsYet")}</p> : (
-                    <ul className="space-y-2 text-sm">
+                    <ul className="space-y-3 text-sm">
                       {selectedDebtForPayment.payments.slice().reverse().map(p => (
-                        <li key={p.id} className="flex justify-between items-center border-b pb-1 last:border-b-0">
-                          <span>{format(new Date(p.paymentDate), "PPP")}</span>
-                          <span className="font-medium">{currencySymbol}{p.amountPaid.toFixed(2)}</span>
+                        <li key={p.id} className="border-b pb-2 last:border-b-0 last:pb-0">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-grow">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-medium text-foreground">{currencySymbol}{p.amountPaid.toFixed(2)}</span>
+                                    <span className="text-xs text-muted-foreground">{format(new Date(p.paymentDate), "PPP")}</span>
+                                </div>
+                                {p.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{p.notes}</p>}
+                            </div>
+                            <div className="ml-2 flex items-center space-x-1 shrink-0">
+                                <Button size="icon" variant="ghost" onClick={() => handleOpenEditPaymentForm(p)} className="h-7 w-7 hover:bg-primary/10">
+                                    <Icons.edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                    <Button size="icon" variant="ghost" className="text-destructive hover:bg-destructive/10 h-7 w-7">
+                                        <Icons.trash className="h-3.5 w-3.5" />
+                                    </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="z-[60]"> {/* Ensure higher z-index */}
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>{getDebtTranslation(currentLanguage, "deletePaymentTitle")}</AlertDialogTitle>
+                                        <AlertDialogDescription>{getDebtTranslation(currentLanguage, "deletePaymentDesc")}</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>{getDebtTranslation(currentLanguage, "cancel")}</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeletePayment(p.id)} className="bg-destructive hover:bg-destructive/80">
+                                        {getDebtTranslation(currentLanguage, "delete")}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -661,8 +787,8 @@ export default function DebtManagementPage() {
               </Card>
             </div>
             <DialogFooter className="sm:justify-between">
-              {!selectedDebtForPayment.isPaidOff && selectedDebtForPayment.currentBalance === 0 && (
-                <Button variant="outline" onClick={() => { handleMarkAsPaid(selectedDebtForPayment.id); setIsPaymentModalOpen(false); }} className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md">
+              {!selectedDebtForPayment.isPaidOff && selectedDebtForPayment.currentBalance <= 0.001 && ( // Check if fully paid
+                <Button variant="outline" onClick={() => { handleMarkAsPaid(selectedDebtForPayment.id); }} className="bg-green-500 hover:bg-green-600 text-white rounded-lg shadow-md">
                   <Icons.checkCircle className="mr-2 h-5 w-5" /> {getDebtTranslation(currentLanguage, "markAsFullyPaidButton")}
                 </Button>
               )}

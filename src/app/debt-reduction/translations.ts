@@ -1,3 +1,4 @@
+
 // src/app/debt-reduction/translations.ts
 import type { Debt } from "./page"; // Assuming Debt type is exported from page.tsx
 
@@ -36,7 +37,7 @@ export const debtTranslations = {
     minPayment: "Min. Payment",
     interestRate: "Interest Rate",
     addedOn: "Added",
-    makeViewPaymentButton: "Make/View Payment",
+    makeViewPaymentButton: "Manage Payments", // Updated
     deleteDebtTitle: "Delete Debt?",
     deleteDebtDescription: (debtName: string) => `Are you sure you want to delete the debt titled "${debtName}"? This action cannot be undone.`,
     cancel: "Cancel",
@@ -44,7 +45,8 @@ export const debtTranslations = {
     paidOffDebts: "Paid Off Debts",
     fullyPaid: "Fully Paid",
     initialAmount: "Initial Amount",
-    lastPayment: "Last Payment",
+    lastPayment: "Last Payment", // Kept as is, you might want "Last Payment Date" for clarity
+    lastPaymentOn: "Last Payment", // New specific key for display
     debtReductionStrategies: "Debt Reduction Strategies",
     debtReductionStrategiesDescription: "Explore effective methods to accelerate your debt payoff journey.",
     debtSnowballTitle: "1. Debt Snowball Method",
@@ -69,17 +71,22 @@ export const debtTranslations = {
     considerations: "Important Considerations:",
     considerationsText: "The best strategy depends on your personal financial situation and psychological preferences. Consider factors like your income stability, risk tolerance, and what motivates you. For complex situations, consulting a financial advisor is recommended. PocketLedger Pro provides information for educational purposes only and does not offer financial advice.",
 
-    paymentModalTitle: (debtName: string) => `Make Payment / View History: ${debtName}`,
+    paymentModalTitle: (debtName: string) => `Manage Payments: ${debtName}`, // Updated
     addPaymentCardTitle: "Add New Payment",
+    editPaymentTitle: "Edit Payment", // New
     paymentAmountLabel: "Payment Amount",
     paymentDateLabel: "Payment Date",
     paymentNotesLabel: "Payment Notes (Optional)",
     paymentNotesPlaceholder: "Notes about the payment...",
     savePaymentButton: "Save Payment",
+    updatePaymentButton: "Update Payment", // New
+    cancelEditButton: "Cancel Edit", // New
     paymentHistoryCardTitle: "Payment History",
     noPaymentsYet: "No payments made for this debt yet.",
     markAsFullyPaidButton: "Mark as Fully Paid",
     closeButton: "Close",
+    deletePaymentTitle: "Delete Payment?", // New
+    deletePaymentDesc: "Are you sure you want to delete this payment? This action cannot be undone.", // New
     footerText: (year: number) => `© ${year} PocketLedger Pro. All rights reserved.`,
     
     toastErrorTitle: "Error",
@@ -95,6 +102,11 @@ export const debtTranslations = {
     toastDebtStatusUpdatedTitle: "Debt Status Updated",
     toastDebtMarkedAsPaid: "Debt marked as fully paid.",
     toastLoadingError: "Failed to parse debts from localStorage:",
+    paymentUpdatedTitle: "Payment Updated", // New
+    paymentUpdatedDesc: (debtName: string) => `Payment for ${debtName} has been updated.`, // New
+    paymentDeletedTitle: "Payment Deleted", // New
+    paymentDeletedDesc: "The payment has been removed from history.", // New
+    loadingDebts: "Loading debt information...", // New
     selectAnOption: "Select an option",
 
     paymentFrequencies: {
@@ -151,7 +163,7 @@ export const debtTranslations = {
     minPayment: "Min. Ödeme",
     interestRate: "Faiz Oranı",
     addedOn: "Eklenme",
-    makeViewPaymentButton: "Ödeme Yap/Görüntüle",
+    makeViewPaymentButton: "Ödemeleri Yönet", // Updated
     deleteDebtTitle: "Borcu Sil?",
     deleteDebtDescription: (debtName: string) => `"${debtName}" adlı borcu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.`,
     cancel: "İptal",
@@ -160,6 +172,7 @@ export const debtTranslations = {
     fullyPaid: "Tamamen Ödendi",
     initialAmount: "Başlangıç Tutarı",
     lastPayment: "Son Ödeme",
+    lastPaymentOn: "Son Ödeme", // New specific key for display
     debtReductionStrategies: "Borç Azaltma Stratejileri",
     debtReductionStrategiesDescription: "Borçlarınızı daha hızlı ve etkili bir şekilde ödeme yolculuğunuzu hızlandıracak yöntemleri keşfedin.",
     debtSnowballTitle: "1. Borç Kartopu Yöntemi (Debt Snowball)",
@@ -184,17 +197,22 @@ export const debtTranslations = {
     considerations: "Önemli Hususlar:",
     considerationsText: "En iyi strateji, kişisel mali durumunuza ve psikolojik tercihlerinize bağlıdır. Gelir istikrarınız, risk toleransınız ve sizi neyin motive ettiği gibi faktörleri göz önünde bulundurun. Karmaşık durumlar için bir mali danışmana başvurmanız önerilir. PocketLedger Pro yalnızca eğitim amaçlı bilgi sağlar ve mali tavsiye vermez.",
     
-    paymentModalTitle: (debtName: string) => `Ödeme Yap / Geçmişi Görüntüle: ${debtName}`,
+    paymentModalTitle: (debtName: string) => `Ödemeleri Yönet: ${debtName}`, // Updated
     addPaymentCardTitle: "Yeni Ödeme Ekle",
+    editPaymentTitle: "Ödemeyi Düzenle", // New
     paymentAmountLabel: "Ödeme Tutarı",
     paymentDateLabel: "Ödeme Tarihi",
     paymentNotesLabel: "Ödeme Notları (Opsiyonel)",
     paymentNotesPlaceholder: "Ödeme ile ilgili notlar...",
     savePaymentButton: "Ödemeyi Kaydet",
+    updatePaymentButton: "Ödemeyi Güncelle", // New
+    cancelEditButton: "Düzenlemeyi İptal Et", // New
     paymentHistoryCardTitle: "Ödeme Geçmişi",
     noPaymentsYet: "Bu borç için henüz ödeme yapılmamış.",
     markAsFullyPaidButton: "Tamamen Ödendi Olarak İşaretle",
     closeButton: "Kapat",
+    deletePaymentTitle: "Ödemeyi Sil?", // New
+    deletePaymentDesc: "Bu ödemeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.", // New
     footerText: (year: number) => `© ${year} PocketLedger Pro. Tüm hakları saklıdır.`,
 
     toastErrorTitle: "Hata",
@@ -210,6 +228,11 @@ export const debtTranslations = {
     toastDebtStatusUpdatedTitle: "Borç Durumu Güncellendi",
     toastDebtMarkedAsPaid: "Borç tamamen ödendi olarak işaretlendi.",
     toastLoadingError: "localStorage'dan borçlar ayrıştırılamadı:",
+    paymentUpdatedTitle: "Ödeme Güncellendi", // New
+    paymentUpdatedDesc: (debtName: string) => `${debtName} için ödeme güncellendi.`, // New
+    paymentDeletedTitle: "Ödeme Silindi", // New
+    paymentDeletedDesc: "Ödeme geçmişten kaldırıldı.", // New
+    loadingDebts: "Borç bilgileri yükleniyor...", // New
     selectAnOption: "Bir seçenek seçin",
     paymentFrequencies: {
       "Monthly": "Aylık",
@@ -234,9 +257,8 @@ export const debtTranslations = {
 };
 
 export type Language = keyof typeof debtTranslations;
-export type TranslationKey = keyof (typeof debtTranslations.en); // Ensure all keys are present in 'en'
+export type TranslationKey = keyof (typeof debtTranslations.en);
 
-// Helper to get the English key from a translated value for a specific category (debt type or payment frequency)
 const getKeyFromTranslatedValue = (
   value: string,
   lang: Language,
@@ -247,12 +269,9 @@ const getKeyFromTranslatedValue = (
     
     for (const key in currentLangSet) {
         if (currentLangSet[key as keyof typeof currentLangSet] === value) {
-            // Return the English key corresponding to this translated value
             return key; 
         }
     }
-    // Fallback if no match is found (should ideally not happen if value is from translated options)
-    // Try to find by English value if current language is not English and value matches an English value
     if (lang !== 'en') {
         for (const keyInEnglish in englishSet) {
             if (englishSet[keyInEnglish as keyof typeof englishSet] === value) {
@@ -275,7 +294,7 @@ export const getPaymentFrequencyKeyFromValue = (value: string, lang: Language): 
 
 export const getDebtTranslation = (lang: Language, key: TranslationKey, ...args: any[]): string => {
   const primaryLangSet = debtTranslations[lang];
-  const fallbackLangSet = debtTranslations.en; // Always fallback to English
+  const fallbackLangSet = debtTranslations.en; 
 
   let translationFunctionOrString;
 
@@ -284,7 +303,6 @@ export const getDebtTranslation = (lang: Language, key: TranslationKey, ...args:
   } else if (fallbackLangSet && key in fallbackLangSet) {
     translationFunctionOrString = fallbackLangSet[key as keyof typeof fallbackLangSet];
   } else {
-    // If key is not found in either, return the key itself as a fallback
     console.warn(`Translation key "${String(key)}" not found for language "${lang}".`);
     return String(key);
   }
@@ -296,7 +314,6 @@ export const getDebtTranslation = (lang: Language, key: TranslationKey, ...args:
 };
 
 
-// For populating SelectItem options
 export const getTranslatedOptions = (lang: Language, category: 'debtTypes' | 'paymentFrequencies'): string[] => {
     const primaryLangSet = debtTranslations[lang]?.[category];
     const fallbackLangSet = debtTranslations.en[category];
