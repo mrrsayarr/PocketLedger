@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -42,7 +41,7 @@ import {
   getTotalIncomeFromDb,
   getTotalExpenseFromDb,
   getSpendingByCategoryFromDb,
-  updateTransactionInDb, // Added import
+  updateTransactionInDb,
 } from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
@@ -59,14 +58,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog, // Added import
-  DialogContent, // Added import
-  DialogHeader, // Added import
-  DialogTitle, // Added import
-  DialogDescription as DialogDesc, // Added import, aliased to avoid conflict
-  DialogFooter, // Added import
-  DialogClose, // Added import
-} from "@/components/ui/dialog"; // Added import
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription as DialogDesc, 
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"; 
 import {
   Tooltip,
   TooltipContent,
@@ -250,6 +249,7 @@ export default function Home() {
       if (storedDarkMode === 'false') { 
         document.documentElement.classList.remove("dark");
       } else { 
+        // Default to dark or if value is 'true' or null
         document.documentElement.classList.add("dark");
       }
 
@@ -354,7 +354,7 @@ export default function Home() {
   const openEditModal = (transaction: Transaction) => {
     setEditingTransaction(transaction);
     setEditFormData({
-      date: new Date(transaction.date), // transaction.date is already a Date object
+      date: transaction.date instanceof Date && !isNaN(transaction.date.getTime()) ? new Date(transaction.date) : new Date(),
       category: transaction.category,
       amount: transaction.amount.toString(),
       type: transaction.type,
@@ -364,8 +364,8 @@ export default function Home() {
   };
 
   const handleUpdateTransaction = async () => {
-    if (!editingTransaction || !editFormData.date || !editFormData.category || editFormData.amount === "") {
-      toast({ title: "Error", description: "Please fill all required fields for editing.", variant: "destructive" });
+    if (!editingTransaction || !editFormData.date || isNaN(editFormData.date.getTime()) || !editFormData.category || editFormData.amount === "") {
+      toast({ title: "Error", description: "Please fill all required fields with valid data for editing.", variant: "destructive" });
       return;
     }
     const numericAmount = parseFloat(editFormData.amount);
@@ -405,13 +405,15 @@ export default function Home() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (/^\d*$/.test(value) || value === "") {
-        setAmount(value);
+    // Allow only digits
+    if (/^\d*$/.test(value) || value === "") { 
+      setAmount(value);
     }
   };
   
   const handleEditAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+     // Allow only digits
     if (/^\d*$/.test(value) || value === "") {
       setEditFormData(prev => ({ ...prev, amount: value }));
     }
@@ -807,13 +809,13 @@ export default function Home() {
                             id="edit-date-calendar"
                             >
                             <Icons.calendarDays className="mr-2 h-4 w-4" />
-                            {editFormData.date ? format(editFormData.date, "PPP") : <span>Pick a date</span>}
+                            {editFormData.date && !isNaN(editFormData.date.getTime()) ? format(editFormData.date, "PPP") : <span>Pick a date</span>}
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0 bg-card/90 backdrop-blur-md rounded-xl shadow-lg" align="start">
                             <Calendar
                             mode="single"
-                            selected={editFormData.date}
+                            selected={editFormData.date && !isNaN(editFormData.date.getTime()) ? editFormData.date : undefined}
                             onSelect={(d) => setEditFormData(prev => ({ ...prev, date: d }))}
                             initialFocus
                             className="bg-card/95 rounded-md"
