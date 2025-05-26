@@ -1,3 +1,9 @@
+// Bu dosya artık kullanılmıyor. Tüm veriler client-side saklanıyor.
+// Sunucuya veya dosya tabanlı SQLite'a erişim kaldırıldı.
+
+// Eğer client-side yardımcı fonksiyonlar gerekiyorsa, onları buraya ekleyebilirsiniz.
+
+export {};
 
 'use server';
 

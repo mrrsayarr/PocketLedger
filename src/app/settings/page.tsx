@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -28,12 +27,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { 
-  listDatabaseBackups, 
-  restoreDatabaseBackup, 
-  deleteDatabaseBackupTables,
-  backupAndResetAllData 
-} from "@/lib/database";
 import { format, parse } from 'date-fns';
 import SlideToConfirmButton from '@/components/ui/slide-to-confirm-button';
 import {
@@ -83,11 +76,10 @@ export default function SettingsPage() {
   const loadBackups = useCallback(async () => {
     setIsLoading(true);
     try {
-      const dbBackupIds = await listDatabaseBackups(); 
-      const allBackupIds = new Set<string>(dbBackupIds);
-
+      const allBackupIds = new Set<string>();
       const noteBackupPrefix = "financialNotes_backup_";
       const debtBackupPrefix = "pocketLedgerDebts_backup_";
+      const transactionsBackupPrefix = "transactions_backup_";
       if (typeof window !== "undefined") {
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
@@ -96,6 +88,9 @@ export default function SettingsPage() {
           }
           if (key?.startsWith(debtBackupPrefix)) {
             allBackupIds.add(key.substring(debtBackupPrefix.length));
+          }
+          if (key?.startsWith(transactionsBackupPrefix)) {
+            allBackupIds.add(key.substring(transactionsBackupPrefix.length));
           }
         }
       }
@@ -115,7 +110,7 @@ export default function SettingsPage() {
           id,
           date,
           formattedDate: format(date, "PPP ppp"),
-          hasTransactions: dbBackupIds.includes(id), 
+          hasTransactions: typeof window !== "undefined" && !!localStorage.getItem(`${transactionsBackupPrefix}${id}`),
           hasNotes: typeof window !== "undefined" && !!localStorage.getItem(`${noteBackupPrefix}${id}`),
           hasDebts: typeof window !== "undefined" && !!localStorage.getItem(`${debtBackupPrefix}${id}`),
         };
@@ -138,25 +133,27 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-        const storedDarkMode = localStorage.getItem('darkMode');
-        if (storedDarkMode === 'true') {
-            setDarkMode(true);
-            document.documentElement.classList.add('dark');
-        } else {
-            setDarkMode(false);
-            document.documentElement.classList.remove('dark');
-        }
+      const storedDarkMode = localStorage.getItem('darkMode');
+      if (storedDarkMode === 'true') {
+        setDarkMode(true);
+        document.documentElement.classList.add('dark');
+      } else {
+        setDarkMode(false);
+        document.documentElement.classList.remove('dark');
+      }
 
-
-        const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
-        if (storedCurrencyCode) {
-          const foundCurrency = currencies.find(c => c.code === storedCurrencyCode);
-          if (foundCurrency) {
-            setSelectedCurrency(foundCurrency);
-          }
-        } else {
-           setSelectedCurrency(currencies.find(c => c.code === 'TRY') || currencies[0]);
+      const storedCurrencyCode = localStorage.getItem("selectedCurrencyCode");
+      if (storedCurrencyCode) {
+        const foundCurrency = currencies.find(c => c.code === storedCurrencyCode);
+        if (foundCurrency) {
+          setSelectedCurrency(foundCurrency);
         }
+      } else {
+         setSelectedCurrency(currencies.find(c => c.code === 'TRY') || currencies[0]);
+      }
+    } else {
+      setDarkMode(false);
+      document.documentElement.classList.remove('dark');
     }
     loadBackups();
   }, [loadBackups]);
@@ -199,11 +196,6 @@ export default function SettingsPage() {
         throw new Error("Selected backup not found.");
       }
 
-      if (backupToRestore.hasTransactions) {
-        await restoreDatabaseBackup(backupId);
-        console.log(`Database (transactions & users) for backup ${backupId} restored.`);
-      }
-
       if (typeof window !== "undefined") {
         if (backupToRestore.hasNotes) {
             const notesData = localStorage.getItem(`financialNotes_backup_${backupId}`);
@@ -241,10 +233,6 @@ export default function SettingsPage() {
   const handleDeleteBackup = async (backup: BackupInfo) => {
     setIsProcessing(true);
     try {
-      if (backup.hasTransactions) {
-        await deleteDatabaseBackupTables(backup.id);
-        console.log(`Database tables for backup ID ${backup.id} deleted.`);
-      }
       if (typeof window !== "undefined") {
         if (backup.hasNotes) {
           localStorage.removeItem(`financialNotes_backup_${backup.id}`);
@@ -275,7 +263,7 @@ export default function SettingsPage() {
   const handleResetData = useCallback(async () => {
     setIsProcessing(true);
     try {
-      const backupId = await backupAndResetAllData();
+      const backupId = new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
       const notesData = localStorage.getItem("financialNotes");
       if (notesData) {
         localStorage.setItem(`financialNotes_backup_${backupId}`, notesData);
@@ -286,13 +274,17 @@ export default function SettingsPage() {
         localStorage.setItem(`pocketLedgerDebts_backup_${backupId}`, debtData);
       }
       localStorage.removeItem("pocketLedgerDebts");
-
+      const transactionsData = localStorage.getItem("transactions");
+      if (transactionsData) {
+        localStorage.setItem(`transactions_backup_${backupId}`, transactionsData);
+      }
+      localStorage.removeItem("transactions");
       toast({
         title: "Data Reset & Backed Up!",
         description: "All application data has been reset. A backup was created.",
         duration: 5000,
       });
-      await loadBackups(); // Refresh backup list
+      await loadBackups();
     } catch (error: any) {
       console.error("Error resetting data:", error);
       toast({

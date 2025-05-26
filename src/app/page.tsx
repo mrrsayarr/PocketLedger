@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
@@ -34,16 +33,6 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
-import {
-  addTransactionToDb,
-  deleteTransactionFromDb,
-  getAllTransactionsFromDb,
-  getTotalBalanceFromDb,
-  getTotalIncomeFromDb,
-  getTotalExpenseFromDb,
-  getSpendingByCategoryFromDb,
-  updateTransactionInDb,
-} from "@/lib/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Toaster } from "@/components/ui/toaster";
 import { Icons } from "@/components/icons";
@@ -167,6 +156,22 @@ const CustomTooltip = ({ active, payload, currencySymbol }: { active?: boolean; 
   return null;
 };
 
+function getTransactionsFromStorage(): Transaction[] {
+  if (typeof window === 'undefined') return [];
+  const data = localStorage.getItem('transactions');
+  if (!data) return [];
+  try {
+    const parsed = JSON.parse(data);
+    return parsed.map((t: any) => ({ ...t, date: new Date(t.date) }));
+  } catch {
+    return [];
+  }
+}
+
+function saveTransactionsToStorage(transactions: Transaction[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('transactions', JSON.stringify(transactions));
+}
 
 export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
@@ -210,21 +215,23 @@ export default function Home() {
 
 
   const loadTransactions = useCallback(async () => {
-    const transactionsFromDb = await getAllTransactionsFromDb();
-    setTransactions(transactionsFromDb);
+    const transactionsFromStorage = getTransactionsFromStorage();
+    setTransactions(transactionsFromStorage);
   }, []);
 
   const loadDashboardData = useCallback(async () => {
-    const balance = await getTotalBalanceFromDb();
+    const transactionsFromStorage = getTransactionsFromStorage();
+    const balance = transactionsFromStorage.reduce((acc, t) => acc + (t.type === 'income' ? t.amount : -t.amount), 0);
     setCurrentBalance(balance);
-    const income = await getTotalIncomeFromDb();
+    const income = transactionsFromStorage.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
     setTotalIncome(income);
-    const expenses = await getTotalExpenseFromDb();
+    const expenses = transactionsFromStorage.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
     setTotalExpenses(expenses);
-    const spending = await getSpendingByCategoryFromDb();
-    setSpendingData(
-      spending.map((item) => ({ name: item.category, value: item.total }))
-    );
+    const spendingMap: { [category: string]: number } = {};
+    transactionsFromStorage.filter(t => t.type === 'expense').forEach(t => {
+      spendingMap[t.category] = (spendingMap[t.category] || 0) + t.amount;
+    });
+    setSpendingData(Object.entries(spendingMap).map(([name, value]) => ({ name, value })));
   }, []); 
 
   const loadInitialData = useCallback(async () => {
@@ -301,48 +308,34 @@ export default function Home() {
       });
       return;
     }
-    let dbOpSuccessful = false;
-    try {
-      await addTransactionToDb(
-        date.toISOString(),
-        category,
-        numericAmount,
-        type,
-        notesInput
-      );
-      dbOpSuccessful = true;
-
-      setDate(new Date());
-      setCategory(categories[0]);
-      setAmount(""); 
-      setNotesInput("");
-      setType("expense");
-      toast({
-        title: "Success",
-        description: "Transaction added successfully.",
-      });
-      await loadTransactions(); 
-      await loadDashboardData(); 
-    } catch (error: any) { 
-        console.error("Error during transaction operation:", error);
-        if (dbOpSuccessful) {
-            toast({
-              title: "Data Reload Error",
-              description: "Transaction saved, but failed to reload data. Please refresh.",
-              variant: "destructive",
-            });
-        } else {
-            toast({
-              title: "Database Error",
-              description: error.message || "Could not save the transaction. Please try again.",
-              variant: "destructive",
-            });
-        }
-    }
+    const transactionsFromStorage = getTransactionsFromStorage();
+    const newTransaction: Transaction = {
+      id: Date.now(),
+      date: date,
+      category,
+      amount: numericAmount,
+      type,
+      notes: notesInput,
+    };
+    const updatedTransactions = [newTransaction, ...transactionsFromStorage];
+    saveTransactionsToStorage(updatedTransactions);
+    setDate(new Date());
+    setCategory(categories[0]);
+    setAmount("");
+    setNotesInput("");
+    setType("expense");
+    toast({
+      title: "Success",
+      description: "Transaction added successfully.",
+    });
+    await loadTransactions();
+    await loadDashboardData();
   };
 
   const deleteTransaction = async (id: number) => {
-    await deleteTransactionFromDb(id);
+    const transactionsFromStorage = getTransactionsFromStorage();
+    const updatedTransactions = transactionsFromStorage.filter(t => t.id !== id);
+    saveTransactionsToStorage(updatedTransactions);
     toast({
       title: "Success",
       description: "Transaction deleted successfully.",
@@ -373,25 +366,18 @@ export default function Home() {
       toast({ title: "Error", description: "Amount must be a valid positive number.", variant: "destructive" });
       return;
     }
-
-    try {
-      await updateTransactionInDb(
-        editingTransaction.id,
-        editFormData.date.toISOString(),
-        editFormData.category,
-        numericAmount,
-        editFormData.type,
-        editFormData.notes
-      );
-      toast({ title: "Success", description: "Transaction updated successfully." });
-      setIsEditModalOpen(false);
-      setEditingTransaction(null);
-      await loadTransactions();
-      await loadDashboardData();
-    } catch (error: any) {
-      console.error("Error updating transaction:", error);
-      toast({ title: "Database Error", description: error.message || "Could not update transaction.", variant: "destructive" });
-    }
+    const transactionsFromStorage = getTransactionsFromStorage();
+    const updatedTransactions = transactionsFromStorage.map(t =>
+      t.id === editingTransaction.id
+        ? { ...t, date: editFormData.date as Date, category: editFormData.category, amount: numericAmount, type: editFormData.type, notes: editFormData.notes }
+        : t
+    ) as Transaction[];
+    saveTransactionsToStorage(updatedTransactions);
+    toast({ title: "Success", description: "Transaction updated successfully." });
+    setIsEditModalOpen(false);
+    setEditingTransaction(null);
+    await loadTransactions();
+    await loadDashboardData();
   };
 
 
